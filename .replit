@@ -24,12 +24,12 @@ args = "AI副業システム (main.py)"
 name = "AI副業システム (main.py)"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd ai_side_biz && python main.py --help"
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd ai_side_biz && python main.py all"
 
 [agent]
 stack = "PNPM_WORKSPACE"

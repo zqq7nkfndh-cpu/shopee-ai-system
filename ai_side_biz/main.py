@@ -31,7 +31,7 @@ def main():
     parser.add_argument("--genre-ids", type=str, default=None,
                          help="楽天ジャンルIDをカンマ区切りで指定(例: 100371,100804)")
     parser.add_argument("--target-margin", type=float, default=0.3,
-                         help="Shopee出品の目標利益率(デフォルト0.3=30%)")
+                         help="Shopee出品の目標利益率(デフォルト0.3=30%%)")
     args = parser.parse_args()
 
     genre_ids = None
