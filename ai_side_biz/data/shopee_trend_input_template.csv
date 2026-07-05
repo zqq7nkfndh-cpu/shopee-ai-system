@@ -1,0 +1,4 @@
+country,genre,product_name,trend_reason,source_url,cost_price_jpy,shipping_cost_jpy
+Singapore,Beauty Tools,ミニ美顔ローラー,Shopee Singaporeのビューティーツールカテゴリで上位表示されていた,https://shopee.sg/example1,800,300
+Taiwan,Home Goods,折りたたみ収納ボックス,台湾ユーザーの口コミで収納グッズの需要が高い,https://shopee.tw/example2,600,350
+Malaysia,Fashion Accessories,日本製ヘアアクセサリー,マレーシアで日本製雑貨の人気が高い,https://shopee.com.my/example3,500,300
