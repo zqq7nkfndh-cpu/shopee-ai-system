@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "AI副業システム (main.py)"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "AI副業システム (Streamlit)"
+
 [[workflows.workflow]]
 name = "AI副業システム (main.py)"
 author = "agent"
@@ -30,6 +34,18 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd ai_side_biz && python main.py all"
+
+[[workflows.workflow]]
+name = "AI副業システム (Streamlit)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd ai_side_biz && streamlit run app.py"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "PNPM_WORKSPACE"
