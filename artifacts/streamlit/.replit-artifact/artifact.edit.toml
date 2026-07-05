@@ -1,0 +1,13 @@
+kind = "web"
+previewPath = "/"
+title = "AI副業システム (Streamlit)"
+version = "1.0.0"
+id = "streamlit-ai-side-biz"
+
+[[services]]
+localPort = 5000
+name = "Streamlit App"
+paths = ["/"]
+
+[services.development]
+run = "cd ai_side_biz && streamlit run app.py"
