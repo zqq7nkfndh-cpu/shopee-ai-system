@@ -475,37 +475,141 @@ elif page == "🌏 Shopee出品下書き":
 # 📝 noteレポート
 # ══════════════════════════════════════════════════════════
 elif page == "📝 noteレポート":
+    import json as _json
+    import datetime as _dt
+
+    WEEKLY_RESULTS_FILE = DATA_DIR / "weekly_results.json"
+    WEEKLY_RESULTS_TEMPLATE = DATA_DIR / "weekly_results_template.json"
+
+    def load_weekly_results() -> dict:
+        src = WEEKLY_RESULTS_FILE if WEEKLY_RESULTS_FILE.exists() else WEEKLY_RESULTS_TEMPLATE
+        if src.exists():
+            with open(src, encoding="utf-8") as f:
+                return _json.load(f)
+        today = _dt.date.today()
+        week_num = (today.day - 1) // 7 + 1
+        return {
+            "week_label": f"{today.year}年{today.month}月 第{week_num}週",
+            "rakuten_room": {"posts_made": 0, "clicks": 0, "estimated_reward_jpy": 0},
+            "shopee": {"listings_approved": 0, "orders": 0, "revenue_jpy": 0, "profit_jpy": 0},
+            "shorts_script_ideas": [],
+            "failures": [],
+            "improvements": [],
+        }
+
+    def save_weekly_results(data: dict) -> None:
+        DATA_DIR.mkdir(exist_ok=True)
+        with open(WEEKLY_RESULTS_FILE, "w", encoding="utf-8") as f:
+            _json.dump(data, f, ensure_ascii=False, indent=2)
+
     st.title("📝 note 週次レポート下書き")
     st.info("⚠️ 下書きです。自分の言葉・実際の数値を加筆修正してから公開してください。")
-    regen_button("🔄 レポートを再生成", "note", "note_weekly_report.md")
 
-    with st.expander("📥 実際の収益データを入力するには"):
-        st.markdown("""
-`ai_side_biz/data/weekly_results.json` を作成し、実際の結果を入力してください。
+    # ── 週次データ入力フォーム ────────────────────────────────────
+    with st.expander("📊 今週の実績データを入力する", expanded=not (OUTPUT_DIR / "note_weekly_report.md").exists()):
+        wk = load_weekly_results()
+        room = wk.get("rakuten_room", {})
+        shopee = wk.get("shopee", {})
 
-テンプレート: `data/weekly_results_template.json`
+        with st.form("weekly_results_form"):
+            st.markdown("### 📅 週ラベル")
+            week_label = st.text_input(
+                "週ラベル",
+                value=wk.get("week_label", ""),
+                placeholder="例: 2026年7月 第1週",
+                label_visibility="collapsed",
+            )
 
-```json
-{
-  "week_label": "2026年7月 第1週",
-  "rakuten_posts": 3,
-  "rakuten_clicks": 12,
-  "rakuten_estimated_reward": 500,
-  "shopee_listings": 1,
-  "shopee_orders": 0,
-  "shopee_revenue": 0,
-  "shopee_profit": 0,
-  "failures": ["出品タイトルが長すぎた"],
-  "improvements": ["次週は60文字以内に修正する"]
-}
-```
-        """)
+            st.markdown("### 🛍️ 楽天ROOM 実績")
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                r_posts = st.number_input("投稿数", min_value=0, value=int(room.get("posts_made", 0)), step=1)
+            with r2:
+                r_clicks = st.number_input("クリック数", min_value=0, value=int(room.get("clicks", 0)), step=1)
+            with r3:
+                r_reward = st.number_input("想定報酬（円）", min_value=0, value=int(room.get("estimated_reward_jpy", 0)), step=10)
 
+            st.markdown("### 🌏 Shopee 実績")
+            s1, s2, s3, s4 = st.columns(4)
+            with s1:
+                s_listings = st.number_input("出品数", min_value=0, value=int(shopee.get("listings_approved", 0)), step=1)
+            with s2:
+                s_orders = st.number_input("注文数", min_value=0, value=int(shopee.get("orders", 0)), step=1)
+            with s3:
+                s_revenue = st.number_input("売上（円）", min_value=0, value=int(shopee.get("revenue_jpy", 0)), step=100)
+            with s4:
+                s_profit = st.number_input("利益（円）", min_value=0, value=int(shopee.get("profit_jpy", 0)), step=100)
+
+            st.markdown("### ❌ うまくいかなかったこと")
+            st.caption("1行につき1件。空行は無視されます。")
+            failures_raw = st.text_area(
+                "失敗・課題",
+                value="\n".join(wk.get("failures", [])),
+                height=110,
+                placeholder="例: 出品タイトルが長すぎて表示が切れた",
+                label_visibility="collapsed",
+            )
+
+            st.markdown("### ✅ 来週への改善点")
+            improvements_raw = st.text_area(
+                "改善点",
+                value="\n".join(wk.get("improvements", [])),
+                height=110,
+                placeholder="例: 次週はタイトルを60文字以内に修正する",
+                label_visibility="collapsed",
+            )
+
+            st.markdown("### 🎬 ショート動画アイデア（任意）")
+            shorts_raw = st.text_area(
+                "ショートアイデア",
+                value="\n".join(wk.get("shorts_script_ideas", [])),
+                height=80,
+                placeholder="例: 開封15秒レビュー動画",
+                label_visibility="collapsed",
+            )
+
+            save_and_regen = st.form_submit_button(
+                "💾 保存して下書きを再生成",
+                use_container_width=True,
+                type="primary",
+            )
+
+        if save_and_regen:
+            new_data = {
+                "week_label": week_label.strip() or wk.get("week_label", ""),
+                "rakuten_room": {
+                    "posts_made": int(r_posts),
+                    "clicks": int(r_clicks),
+                    "estimated_reward_jpy": int(r_reward),
+                },
+                "shopee": {
+                    "listings_approved": int(s_listings),
+                    "orders": int(s_orders),
+                    "revenue_jpy": int(s_revenue),
+                    "profit_jpy": int(s_profit),
+                },
+                "failures": [l.strip() for l in failures_raw.splitlines() if l.strip()],
+                "improvements": [l.strip() for l in improvements_raw.splitlines() if l.strip()],
+                "shorts_script_ideas": [l.strip() for l in shorts_raw.splitlines() if l.strip()],
+            }
+            save_weekly_results(new_data)
+            with st.spinner("下書きを生成中..."):
+                ok, out = run_task("note")
+            if ok:
+                st.success("✅ 保存して下書きを再生成しました！")
+            else:
+                st.error("❌ 生成に失敗しました")
+                st.code(out)
+            st.rerun()
+
+    st.divider()
+
+    regen_button("🔄 下書きのみ再生成（データ変更なし）", "note", "note_weekly_report.md")
     st.divider()
 
     md = load_md("note_weekly_report.md")
     if md is None:
-        st.warning("note_weekly_report.md が見つかりません。再生成ボタンを押してください。")
+        st.warning("まだ下書きがありません。上のフォームでデータを入力して「保存して再生成」してください。")
         st.stop()
 
     tab1, tab2 = st.tabs(["👁️ プレビュー", "📋 テキストコピー用"])
