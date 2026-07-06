@@ -128,6 +128,35 @@ def calc_profit(cost: float, ship: float, selling: float) -> dict:
     }
 
 
+def update_draft_csv(product_name: str, country: str, updates: dict) -> bool:
+    """出品下書きCSVの特定行を更新する（承認/却下の書き込みに使用）"""
+    if not DRAFTS_FILE.exists():
+        return False
+    df = pd.read_csv(DRAFTS_FILE, encoding="utf-8-sig")
+    mask = (
+        (df["product_name"].astype(str) == str(product_name)) &
+        (df["country"].astype(str) == str(country))
+    )
+    if not mask.any():
+        return False
+    for col, val in updates.items():
+        if col in df.columns:
+            df.loc[mask, col] = val
+    df.to_csv(DRAFTS_FILE, index=False, encoding="utf-8-sig")
+    return True
+
+
+def make_approved_csv_bytes(df: pd.DataFrame) -> bytes:
+    """承認済み・非高リスクの行だけ CSV バイト列で返す"""
+    approved = df[
+        (df["approved"].astype(str).str.upper() == "TRUE") &
+        (df["risk_level"].astype(str).str.lower() != "high")
+    ]
+    buf = io.StringIO()
+    approved.to_csv(buf, index=False, encoding="utf-8-sig")
+    return buf.getvalue().encode("utf-8-sig")
+
+
 # ── サイドバー ────────────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -342,12 +371,40 @@ elif page == "📥 商品入力エディタ":
 # 📝 出品下書き確認
 # ══════════════════════════════════════════════════════════
 elif page == "📝 出品下書き確認":
-    st.title("📝 Shopee 出品下書き確認")
+    st.title("📝 Shopee 出品下書き確認・承認")
     st.warning(
         "⚠️ **下書き確認専用です。** "
         "Shopeeへの出品は必ず人間が内容を確認・承認してから手動で行ってください。"
+        "承認ボタンは出品下書きCSVを更新するだけです。自動出品は行いません。"
     )
-    regen_button("🔄 下書きを再生成", "shopee", "shopee_listing_drafts.csv")
+
+    # ── ページ上部ツールバー ─────────────────────────────────
+    tool_col1, tool_col2, tool_col3 = st.columns([2, 2, 1])
+    with tool_col1:
+        regen_button("🔄 下書きを再生成", "shopee", "shopee_listing_drafts.csv")
+    with tool_col3:
+        # ページ上部のクイックエクスポート
+        full_df_for_export = load_csv("shopee_listing_drafts.csv")
+        if full_df_for_export is not None:
+            approved_count_export = len(
+                full_df_for_export[
+                    (full_df_for_export["approved"].astype(str).str.upper() == "TRUE") &
+                    (full_df_for_export["risk_level"].astype(str).str.lower() != "high")
+                ]
+            )
+            if approved_count_export > 0:
+                csv_bytes = make_approved_csv_bytes(full_df_for_export)
+                st.download_button(
+                    label=f"📤 承認済み {approved_count_export}件 をエクスポート",
+                    data=csv_bytes,
+                    file_name=f"shopee_approved_{_dt.date.today().isoformat()}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    type="primary",
+                )
+            else:
+                st.caption("承認済み商品がありません")
+
     st.divider()
 
     df = load_csv("shopee_listing_drafts.csv")
@@ -355,21 +412,41 @@ elif page == "📝 出品下書き確認":
         st.warning("まだ下書きがありません。「📥 商品入力エディタ」でデータを追加してください。")
         st.stop()
 
-    risk_filter = st.multiselect(
-        "リスクフィルター",
-        options=["🟢 低リスク", "🟡 要確認", "🔴 高リスク"],
-        default=["🟢 低リスク", "🟡 要確認", "🔴 高リスク"],
-    )
+    # ── フィルター ───────────────────────────────────────────
+    filter_col1, filter_col2 = st.columns([2, 1])
+    with filter_col1:
+        risk_filter = st.multiselect(
+            "リスクフィルター",
+            options=["🟢 低リスク", "🟡 要確認", "🔴 高リスク"],
+            default=["🟢 低リスク", "🟡 要確認", "🔴 高リスク"],
+        )
+    with filter_col2:
+        status_filter = st.selectbox(
+            "承認状態フィルター",
+            options=["すべて", "未承認のみ", "承認済みのみ", "却下済みのみ"],
+        )
     risk_map = {"🟢 低リスク": "low", "🟡 要確認": "medium", "🔴 高リスク": "high"}
     selected_risks = [risk_map[r] for r in risk_filter]
-    df = df[df["risk_level"].astype(str).str.lower().isin(selected_risks)]
+    df_view = df[df["risk_level"].astype(str).str.lower().isin(selected_risks)].copy()
 
-    st.caption(f"表示件数: {len(df)} 件")
+    if status_filter == "未承認のみ":
+        df_view = df_view[
+            (df_view["approved"].astype(str).str.upper() != "TRUE") &
+            (df_view["status"].astype(str).str.lower() != "rejected")
+        ]
+    elif status_filter == "承認済みのみ":
+        df_view = df_view[df_view["approved"].astype(str).str.upper() == "TRUE"]
+    elif status_filter == "却下済みのみ":
+        df_view = df_view[df_view["status"].astype(str).str.lower() == "rejected"]
+
+    approved_in_view = len(df_view[df_view["approved"].astype(str).str.upper() == "TRUE"])
+    rejected_in_view = len(df_view[df_view["status"].astype(str).str.lower() == "rejected"])
+    st.caption(f"表示: {len(df_view)} 件　｜　✅ 承認済み: {approved_in_view} 件　｜　🚫 却下済み: {rejected_in_view} 件")
     st.divider()
 
-    for _, row in df.iterrows():
+    for idx, row in df_view.iterrows():
         product_name = str(row.get("product_name", ""))
-        country = row.get("country", "")
+        country = str(row.get("country", ""))
         genre = row.get("genre", "")
         cost = row.get("cost_price_jpy", "")
         selling = row.get("selling_price_jpy", "")
@@ -378,32 +455,49 @@ elif page == "📝 出品下書き確認":
         margin = row.get("profit_margin", "")
         min_price = row.get("min_price_no_loss_jpy", "")
         fee = row.get("fee_estimate_jpy", "")
-        risk = str(row.get("risk_level", ""))
+        risk = str(row.get("risk_level", "")).lower()
         risk_reason = str(row.get("risk_reason", ""))
         category_sug = str(row.get("category_suggestion", ""))
         target_cust = str(row.get("target_customer", ""))
         shopee_title = str(row.get("shopee_title", ""))
         shopee_desc = str(row.get("shopee_description", ""))
         bullets_raw = str(row.get("bullet_points", ""))
-        keywords = str(row.get("keywords", ""))
+        keywords_val = str(row.get("keywords", ""))
         selling_pts_raw = str(row.get("selling_points", ""))
         caution = str(row.get("caution_notes", ""))
         source_url = str(row.get("source_url", ""))
-        approved = str(row.get("approved", "FALSE"))
+        approved = str(row.get("approved", "FALSE")).upper()
+        status_val = str(row.get("status", "")).lower()
+        is_rejected = status_val == "rejected"
 
-        border_color = {"low": "#28a745", "medium": "#ffc107", "high": "#dc3545"}.get(risk.lower(), "#888")
+        item_key = f"item_{idx}"
+        confirm_key = f"confirm_approve_{item_key}"
+        override_key = f"override_high_{item_key}"
 
         with st.container(border=True):
-            h_col, r_col = st.columns([4, 1])
+
+            # ── ヘッダー行 ─────────────────────────────────────
+            h_col, r_col = st.columns([5, 2])
             with h_col:
-                st.subheader(product_name)
-                st.caption(f"🌍 {country}  ｜  ジャンル: {genre}  ｜  カテゴリ候補: {category_sug}")
+                if approved == "TRUE":
+                    st.markdown(f"### ✅ {product_name}")
+                elif is_rejected:
+                    st.markdown(f"### 🚫 ~~{product_name}~~")
+                else:
+                    st.markdown(f"### 🔲 {product_name}")
+                st.caption(f"🌍 {country}  ｜  {genre}  ｜  カテゴリ候補: {category_sug}")
                 if source_url and source_url != "nan":
                     st.markdown(f"[🔗 商品ページを開く]({source_url})")
             with r_col:
-                st.markdown(f"**リスク**\n\n{risk_badge(risk)}")
-                st.caption(f"承認: {'✅ 済' if approved.upper() == 'TRUE' else '🔲 未'}")
+                st.markdown(f"**{risk_badge(risk)}**")
+                if approved == "TRUE":
+                    st.success("✅ 承認済み")
+                elif is_rejected:
+                    st.error("🚫 却下済み")
+                else:
+                    st.info("🔲 未承認")
 
+            # ── 価格メトリクス ──────────────────────────────────
             m1, m2, m3, m4, m5 = st.columns(5)
             m1.metric("仕入れ", f"¥{cost}")
             m2.metric("推奨販売価格", f"¥{selling}")
@@ -415,15 +509,21 @@ elif page == "📝 出品下書き確認":
                 m5.metric("利益率", "-")
 
             m6, m7 = st.columns(2)
-            m6.metric("手数料概算", f"¥{fee}", help="取引5%+サービス5%+決済2%の合計概算")
-            m7.metric("損益分岐価格", f"¥{min_price}", help="この価格を下回ると赤字になる最低ライン")
+            m6.metric("手数料概算", f"¥{fee}", help="取引5%+サービス5%+決済2%")
+            m7.metric("損益分岐価格", f"¥{min_price}", help="この価格を下回ると赤字")
 
-            if risk_reason and risk_reason not in ("nan", "特記事項なし（簡易チェックのみ。最終確認は人間が行うこと）"):
+            # ── リスク詳細 ──────────────────────────────────────
+            if (risk_reason and
+                    risk_reason not in ("nan", "特記事項なし（簡易チェックのみ。最終確認は人間が行うこと）")):
                 with st.expander("⚠️ リスク詳細を見る"):
-                    st.warning(risk_reason)
+                    if risk == "high":
+                        st.error(risk_reason)
+                    else:
+                        st.warning(risk_reason)
 
             st.markdown("---")
 
+            # ── 出品コピータブ ───────────────────────────────────
             tab1, tab2, tab3 = st.tabs(["📋 出品コピー", "🎯 販売戦略", "⚠️ 注意事項"])
 
             with tab1:
@@ -433,9 +533,8 @@ elif page == "📝 出品下書き確認":
                     value=shopee_title if shopee_title != "nan" else "",
                     height=60,
                     label_visibility="collapsed",
-                    key=f"title_{product_name}_{country}",
+                    key=f"title_{item_key}",
                 )
-
                 if shopee_desc and shopee_desc != "nan":
                     st.markdown("**商品説明文**")
                     st.text_area(
@@ -443,29 +542,28 @@ elif page == "📝 出品下書き確認":
                         value=shopee_desc,
                         height=110,
                         label_visibility="collapsed",
-                        key=f"desc_{product_name}_{country}",
+                        key=f"desc_{item_key}",
                     )
-
                 if bullets_raw and bullets_raw != "nan":
                     st.markdown("**箇条書きポイント**")
-                    bullets = [b.strip() for b in bullets_raw.split("|") if b.strip()]
-                    bullet_text = "\n".join(bullets)
+                    bullet_text = "\n".join(
+                        b.strip() for b in bullets_raw.split("|") if b.strip()
+                    )
                     st.text_area(
                         "bullets",
                         value=bullet_text,
                         height=130,
                         label_visibility="collapsed",
-                        key=f"bullets_{product_name}_{country}",
+                        key=f"bullets_{item_key}",
                     )
-
-                if keywords and keywords != "nan":
+                if keywords_val and keywords_val != "nan":
                     st.markdown("**検索キーワード**")
                     st.text_area(
                         "keywords",
-                        value=keywords,
+                        value=keywords_val,
                         height=60,
                         label_visibility="collapsed",
-                        key=f"kw_{product_name}_{country}",
+                        key=f"kw_{item_key}",
                     )
 
             with tab2:
@@ -482,12 +580,114 @@ elif page == "📝 出品下書き確認":
                 if caution and caution != "nan":
                     st.info(caution)
 
-            status_text = (
-                "✅ 承認済み — エクスポート対象"
-                if approved.upper() == "TRUE"
-                else "🔲 未承認 — 承認するには drafts CSVの approved 列を TRUE に変更"
-            )
-            st.caption(f"ステータス: {status_text}")
+            st.markdown("---")
+
+            # ══ 承認・却下アクションエリア ══════════════════════════
+
+            # 承認確認ダイアログ中
+            if st.session_state.get(confirm_key):
+                st.warning(
+                    f"**「{product_name}」（{country}）を承認しますか？**\n\n"
+                    "承認すると出品下書きCSVの `approved` 列が `TRUE` になり、"
+                    "エクスポート対象になります。\n"
+                    "Shopeeへの自動出品は行いません。"
+                )
+                yes_col, no_col = st.columns(2)
+                with yes_col:
+                    if st.button(
+                        "✅ 承認を確定する",
+                        key=f"confirm_yes_{item_key}",
+                        use_container_width=True,
+                        type="primary",
+                    ):
+                        ok = update_draft_csv(product_name, country, {
+                            "approved": "TRUE",
+                            "status": "approved",
+                        })
+                        st.session_state.pop(confirm_key, None)
+                        if ok:
+                            st.success(f"✅ 「{product_name}」を承認しました。")
+                        else:
+                            st.error("CSVの更新に失敗しました。")
+                        st.rerun()
+                with no_col:
+                    if st.button(
+                        "キャンセル",
+                        key=f"confirm_no_{item_key}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
+
+            # 承認済み → 取り消しボタン
+            elif approved == "TRUE":
+                undo_col, _ = st.columns([1, 2])
+                with undo_col:
+                    if st.button(
+                        "↩️ 承認を取り消す",
+                        key=f"undo_{item_key}",
+                        use_container_width=True,
+                    ):
+                        update_draft_csv(product_name, country, {
+                            "approved": "FALSE",
+                            "status": "draft_pending_human_approval",
+                        })
+                        st.rerun()
+
+            # 却下済み → 取り消しボタン
+            elif is_rejected:
+                restore_col, _ = st.columns([1, 2])
+                with restore_col:
+                    if st.button(
+                        "↩️ 却下を取り消す",
+                        key=f"restore_{item_key}",
+                        use_container_width=True,
+                    ):
+                        update_draft_csv(product_name, country, {
+                            "approved": "FALSE",
+                            "status": "draft_pending_human_approval",
+                        })
+                        st.rerun()
+
+            # 未承認・未却下 → メインアクションボタン
+            else:
+                if risk == "high":
+                    st.error(
+                        "🔴 **高リスク商品です。** 通常は承認できません。\n"
+                        "強制承認する場合はチェックボックスをオンにしてください。"
+                    )
+                    allow_high = st.checkbox(
+                        "⚠️ リスク内容を確認し、自己責任で強制承認する",
+                        key=override_key,
+                    )
+                    can_approve = allow_high
+                else:
+                    can_approve = True
+
+                action_col1, action_col2 = st.columns(2)
+
+                with action_col1:
+                    if st.button(
+                        "✅ 承認する" if risk != "high" else "⚠️ 強制承認する",
+                        key=f"approve_{item_key}",
+                        use_container_width=True,
+                        type="primary",
+                        disabled=not can_approve,
+                    ):
+                        st.session_state[confirm_key] = True
+                        st.rerun()
+
+                with action_col2:
+                    if st.button(
+                        "❌ 却下する",
+                        key=f"reject_{item_key}",
+                        use_container_width=True,
+                    ):
+                        update_draft_csv(product_name, country, {
+                            "approved": "FALSE",
+                            "status": "rejected",
+                        })
+                        st.rerun()
 
         st.write("")
 
