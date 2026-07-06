@@ -1,0 +1,104 @@
+I want to focus only on Shopee.
+
+Please modify this project into a Shopee-only AI product research and listing system.
+
+Goal:
+The app should research potentially profitable Japanese products for Shopee cross-border selling, create listing drafts, calculate profit, check risks, and eventually list approved products to Shopee using the official Shopee Open Platform API.
+
+Important safety rules:
+- Remove or hide Rakuten ROOM features.
+- Do not auto-post to Rakuten ROOM.
+- Shopee auto-listing must be disabled by default.
+- Add a dry-run mode first.
+- Only products with approved = true can be exported or listed.
+- Do not list high-risk products.
+- Do not list food, supplements, cosmetics, batteries, liquids, medicine, counterfeit goods, branded goods with unclear rights, copyrighted character goods, or prohibited items unless manually confirmed.
+- Final listing should require a clear manual confirmation button.
+
+Please add these features:
+
+1. Shopee product research dashboard
+- country
+- genre
+- product_name
+- trend_reason
+- source_url
+- cost_price_jpy
+- shipping_cost_jpy
+- expected_selling_price
+- fee_estimate
+- profit
+- profit_margin
+- risk_level
+- risk_reason
+- approved
+- status
+
+2. Product input editor
+- Add new product ideas from the Streamlit app
+- Edit existing product ideas
+- Delete rows
+- Save to CSV
+
+3. Listing draft generator
+Generate:
+- English Shopee title
+- English Shopee description
+- bullet points
+- search keywords
+- category suggestion
+- target customer
+- selling points
+- caution notes
+
+4. Profit calculator
+Calculate:
+- cost price
+- domestic shipping if any
+- international shipping estimate
+- Shopee fee estimate
+- target selling price
+- profit
+- profit margin
+- minimum price to avoid loss
+
+5. Risk checker
+Flag:
+- food
+- supplements
+- cosmetics
+- medicine
+- batteries
+- liquids
+- fragile items
+- heavy items
+- branded goods
+- character goods
+- copyright/trademark risk
+- unclear stock source
+- possible prohibited items
+
+6. Approved listing export
+- Add button: Export approved listings CSV
+- Only export rows where approved = true and risk_level is low or medium
+- Do not export rejected or high-risk items
+
+7. Future Shopee API integration
+Prepare the code structure for official Shopee Open Platform API listing.
+Add a module called shopee_api.py.
+Do not actually list products yet.
+Create placeholder functions for:
+- authenticate
+- create_item
+- upload_images
+- update_stock
+- get_orders
+
+8. iPad-friendly Streamlit UI
+- Large buttons
+- Easy copy text areas
+- Editable table
+- Clear status labels
+- Preview listing before approval
+
+Please keep everything safe and approval-based.

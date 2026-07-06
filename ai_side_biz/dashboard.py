@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-dashboard.py
+dashboard.py — Shopee出品下書きを統合したダッシュボードCSVを作る
 
-rakuten_room_candidates.csv と shopee_listing_drafts.csv を統合して
-dashboard.csv (収益・ステータス管理用の一覧)を作る。
-
-- 既存の dashboard.csv があれば読み込み、同じ(date, platform, product_name)の
-  行は「承認状況(approved/status)」を維持しつつ、新しいリサーチ結果で更新する。
-- これにより「一度人間が承認した行が再実行で消えてしまう」事故を防ぐ。
+既存のdashboard.csvがあれば承認状況(approved/status)を維持しつつ最新データで更新する。
 """
 import csv
 from config import CSV_COLUMNS, OUTPUT_DIR
@@ -21,31 +16,25 @@ def _load_csv(path):
 
 
 def _row_key(row):
-    return (row.get("date", ""), row.get("platform", ""), row.get("product_name", ""))
+    return (row.get("date", ""), row.get("country", ""), row.get("product_name", ""))
 
 
 def build_dashboard() -> list:
     existing = _load_csv(OUTPUT_DIR / "dashboard.csv")
     existing_map = {_row_key(r): r for r in existing}
 
-    new_rows = []
-    new_rows += _load_csv(OUTPUT_DIR / "rakuten_room_candidates.csv")
-    new_rows += _load_csv(OUTPUT_DIR / "shopee_listing_drafts.csv")
+    new_rows = _load_csv(OUTPUT_DIR / "shopee_listing_drafts.csv")
 
-    merged = dict(existing_map)  # 既存を土台にする
+    merged = dict(existing_map)
     for row in new_rows:
         key = _row_key(row)
         if key in existing_map:
-            # 人間が編集したかもしれない approved / status は保持し、それ以外の
-            # リサーチ情報(価格・リスク等)は最新の値に更新する。
-            kept_status = existing_map[key].get("status", row.get("status", ""))
-            kept_approved = existing_map[key].get("approved", row.get("approved", "FALSE"))
-            row["status"] = kept_status
-            row["approved"] = kept_approved
+            row["status"] = existing_map[key].get("status", row.get("status", ""))
+            row["approved"] = existing_map[key].get("approved", row.get("approved", "FALSE"))
         merged[key] = row
 
     rows = list(merged.values())
-    rows.sort(key=lambda r: (r.get("platform", ""), r.get("date", "")), reverse=True)
+    rows.sort(key=lambda r: r.get("date", ""), reverse=True)
     return rows
 
 
