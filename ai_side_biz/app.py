@@ -822,7 +822,7 @@ elif page == "📤 承認済みエクスポート":
     if exportable == 0:
         st.info(
             "エクスポート可能な商品がありません。\n\n"
-            "👉 `shopee_listing_drafts.csv` の **approved 列を TRUE** に変更すると承認されます。\n"
+            "👉「📝 出品下書き確認」ページで商品を **承認** するとここに表示されます。\n"
             "高リスク商品は承認してもエクスポートされません。"
         )
     else:
@@ -835,8 +835,13 @@ elif page == "📤 承認済みエクスポート":
         ] if c in approved_df.columns]
         st.dataframe(approved_df[display_cols], use_container_width=True, hide_index=True)
 
+        # ── ① CSV ダウンロード（メインアクション）────────────────
         st.divider()
         st.subheader("⬇️ ダウンロード")
+        st.caption(
+            "承認はCSVへの記録のみです。ここからダウンロードしたCSVをもとに、"
+            "Shopee Seller Centerで**手動出品**してください。"
+        )
 
         dl_col1, dl_col2 = st.columns(2)
 
@@ -851,7 +856,7 @@ elif page == "📤 承認済みエクスポート":
                 use_container_width=True,
                 type="primary",
             )
-            st.caption("このCSVをもとにShopee Seller Centerで手動出品してください")
+            st.caption("Shopee Seller Center での手動出品に使用してください")
 
         with dl_col2:
             api_items = []
@@ -879,7 +884,86 @@ elif page == "📤 承認済みエクスポート":
                 mime="application/json",
                 use_container_width=True,
             )
-            st.caption("将来のShopee Open Platform API連携用（現在はドライランのみ）")
+            st.caption("将来の Shopee Open Platform API 連携用（確認・編集してから使用）")
+
+        # ── ② Shopeeへ直接出品（将来機能 / DRY_RUN=True の間は無効）─
+        st.divider()
+        st.subheader("🚀 Shopeeへ直接出品する（将来機能）")
+
+        from shopee_api import DRY_RUN as _SHOPEE_DRY_RUN
+
+        if _SHOPEE_DRY_RUN:
+            st.warning(
+                "**🔒 DRY_RUN = True のため、この機能は現在無効です。**\n\n"
+                "Shopee Open Platform API の申請・設定が完了し、"
+                "`shopee_api.py` の `DRY_RUN = False` に変更すると有効になります。\n\n"
+                "現在はCSVダウンロード → Shopee Seller Centerでの手動出品のみ対応しています。"
+            )
+            st.button(
+                "🚀 承認済み商品をShopeeへ出品する（現在無効）",
+                disabled=True,
+                use_container_width=True,
+                help="shopee_api.py の DRY_RUN を False に変更すると有効になります",
+            )
+            st.caption(
+                "⚠️ この機能を有効にする前に必ず: "
+                "① Shopee Open Platform でアプリ申請 "
+                "② API キーを環境変数に設定 "
+                "③ 少量の商品でテスト出品を実施"
+            )
+        else:
+            # DRY_RUN=False になったときの最終確認フロー
+            st.error(
+                "⚠️ **DRY_RUN = False です。** "
+                "このボタンを押すと承認済み商品が実際に Shopee へ出品されます。"
+            )
+            publish_confirm_key = "confirm_publish_to_shopee"
+            if st.session_state.get(publish_confirm_key):
+                st.error(
+                    f"**本当に {exportable} 件の商品を Shopee へ出品しますか？**\n\n"
+                    "この操作は取り消せません。Shopee Seller Center でも確認できますが、"
+                    "出品後は手動での削除が必要になります。"
+                )
+                pub_yes, pub_no = st.columns(2)
+                with pub_yes:
+                    if st.button(
+                        f"✅ {exportable}件 を今すぐ出品する",
+                        key="publish_yes",
+                        use_container_width=True,
+                        type="primary",
+                    ):
+                        from shopee_api import create_item as _create_item
+                        results = []
+                        for _, r in approved_df.iterrows():
+                            res = _create_item({
+                                "name": r.get("shopee_title", ""),
+                                "description": r.get("shopee_description", ""),
+                                "price": float(r.get("selling_price_usd", 0)),
+                                "stock": 10,
+                                "category_id": 0,
+                                "images": [],
+                                "logistics": [],
+                            })
+                            results.append(res)
+                        st.session_state.pop(publish_confirm_key, None)
+                        success = [r for r in results if not r.get("error")]
+                        st.success(f"✅ {len(success)} 件の出品が完了しました。")
+                with pub_no:
+                    if st.button(
+                        "キャンセル",
+                        key="publish_no",
+                        use_container_width=True,
+                    ):
+                        st.session_state.pop(publish_confirm_key, None)
+                        st.rerun()
+            else:
+                if st.button(
+                    f"🚀 承認済み {exportable}件 を Shopee へ出品する",
+                    use_container_width=True,
+                    type="primary",
+                ):
+                    st.session_state[publish_confirm_key] = True
+                    st.rerun()
 
     if excluded > 0:
         st.divider()
