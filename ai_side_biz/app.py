@@ -172,6 +172,7 @@ with st.sidebar:
             "💰 利益計算シミュレーター",
             "📤 承認済みエクスポート",
             "✅ 出品準備チェックリスト",
+            "💴 仕入れ・価格トラッカー",
             "📰 noteレポート",
             "ℹ️ 使い方",
         ],
@@ -1206,6 +1207,343 @@ elif page == "✅ 出品準備チェックリスト":
 
 > ⚠️ DRY_RUN を False にする前に、必ず API の動作テストを行ってください。
     """)
+
+
+# ══════════════════════════════════════════════════════════
+# 💴 仕入れ・価格トラッカー
+# ══════════════════════════════════════════════════════════
+elif page == "💴 仕入れ・価格トラッカー":
+    TRACKER_FILE = DATA_DIR / "product_cost_tracker.csv"
+
+    TRACKER_COLUMNS = [
+        "product_name", "country",
+        "supplier_name", "supplier_url",
+        "actual_purchase_price_jpy", "domestic_shipping_jpy",
+        "packaging_cost_jpy", "export_forwarding_fee_jpy",
+        "international_shipping_estimate_jpy",
+        "shopee_fee_rate", "target_profit_margin",
+        "minimum_selling_price", "recommended_selling_price",
+        "expected_profit", "expected_profit_margin",
+        "stock_status", "last_checked_date", "notes",
+    ]
+
+    STOCK_OPTIONS = ["in_stock", "low_stock", "out_of_stock", "unknown"]
+    STOCK_LABELS = {
+        "in_stock":    "✅ 在庫あり",
+        "low_stock":   "⚠️ 残りわずか",
+        "out_of_stock":"❌ 在庫なし",
+        "unknown":     "❓ 不明",
+    }
+
+    def load_tracker() -> pd.DataFrame:
+        if TRACKER_FILE.exists():
+            df = pd.read_csv(TRACKER_FILE, encoding="utf-8-sig")
+            for col in TRACKER_COLUMNS:
+                if col not in df.columns:
+                    df[col] = ""
+            return df[TRACKER_COLUMNS]
+        # 下書きCSVから商品名・国だけ引き継いで初期化
+        draft = load_csv("shopee_listing_drafts.csv")
+        if draft is not None and len(draft) > 0:
+            rows = []
+            for _, r in draft.iterrows():
+                rows.append({
+                    "product_name": r.get("product_name", ""),
+                    "country": r.get("country", ""),
+                    "supplier_name": "",
+                    "supplier_url": "",
+                    "actual_purchase_price_jpy": r.get("cost_price_jpy", 0),
+                    "domestic_shipping_jpy": r.get("shipping_cost_jpy", 0),
+                    "packaging_cost_jpy": 0,
+                    "export_forwarding_fee_jpy": 0,
+                    "international_shipping_estimate_jpy": 0,
+                    "shopee_fee_rate": 0.12,
+                    "target_profit_margin": 0.20,
+                    "minimum_selling_price": 0,
+                    "recommended_selling_price": 0,
+                    "expected_profit": 0,
+                    "expected_profit_margin": 0.0,
+                    "stock_status": "unknown",
+                    "last_checked_date": "",
+                    "notes": "",
+                })
+            return pd.DataFrame(rows, columns=TRACKER_COLUMNS)
+        return pd.DataFrame(columns=TRACKER_COLUMNS)
+
+    def recalc_row(row: dict) -> dict:
+        """仕入れコストと手数料から各種価格・利益を再計算する"""
+        cost = (
+            float(row.get("actual_purchase_price_jpy") or 0)
+            + float(row.get("domestic_shipping_jpy") or 0)
+            + float(row.get("packaging_cost_jpy") or 0)
+            + float(row.get("export_forwarding_fee_jpy") or 0)
+            + float(row.get("international_shipping_estimate_jpy") or 0)
+        )
+        fee_rate = float(row.get("shopee_fee_rate") or 0.12)
+        margin = float(row.get("target_profit_margin") or 0.20)
+        denom_min = 1 - fee_rate
+        denom_rec = 1 - fee_rate - margin
+        min_price = round(cost / denom_min) if denom_min > 0 else 0
+        rec_price = round(cost / denom_rec) if denom_rec > 0 else 0
+        exp_profit = round(rec_price * (1 - fee_rate) - cost)
+        exp_margin = (exp_profit / rec_price) if rec_price > 0 else 0.0
+        return {
+            **row,
+            "minimum_selling_price": min_price,
+            "recommended_selling_price": rec_price,
+            "expected_profit": exp_profit,
+            "expected_profit_margin": round(exp_margin, 4),
+        }
+
+    def save_tracker(df: pd.DataFrame) -> None:
+        TRACKER_FILE.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(TRACKER_FILE, index=False, encoding="utf-8-sig")
+
+    # ── 初期ロード ───────────────────────────────────────────
+    if "tracker_df" not in st.session_state:
+        st.session_state["tracker_df"] = load_tracker()
+
+    tracker_df: pd.DataFrame = st.session_state["tracker_df"]
+
+    # ── タイトルと操作ボタン（上部固定） ────────────────────
+    st.title("💴 仕入れ・価格トラッカー")
+    st.caption(
+        "商品ごとの実際の仕入れコスト・送料・利益目標を管理します。"
+        "承認・出品とは独立しており、Shopeeへの出品は行いません。"
+    )
+
+    top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
+    save_clicked = top_col1.button("💾 すべて保存", type="primary", use_container_width=True)
+    recalc_clicked = top_col2.button("🔄 利益を再計算してから保存", use_container_width=True)
+    reload_clicked = top_col3.button("↩️ 再読み込み", use_container_width=True)
+
+    if reload_clicked:
+        st.session_state.pop("tracker_df", None)
+        st.rerun()
+
+    if recalc_clicked or save_clicked:
+        # 保存前に再計算を実行（recalc_clicked の場合のみ計算、save_clicked は現状保存）
+        rows_out = []
+        for _, r in tracker_df.iterrows():
+            rows_out.append(recalc_row(r.to_dict()) if recalc_clicked else r.to_dict())
+        tracker_df = pd.DataFrame(rows_out, columns=TRACKER_COLUMNS)
+        st.session_state["tracker_df"] = tracker_df
+        save_tracker(tracker_df)
+        st.success("✅ 保存しました。")
+        st.rerun()
+
+    if len(tracker_df) == 0:
+        st.info(
+            "データがありません。\n\n"
+            "「📥 商品入力エディタ」で商品を追加し、下書きを生成すると"
+            "自動的にここに読み込まれます。"
+        )
+        st.stop()
+
+    # ── サマリーバー ─────────────────────────────────────────
+    low_margin_count = 0
+    stock_warn_count = 0
+    for _, r in tracker_df.iterrows():
+        try:
+            em = float(r.get("expected_profit_margin") or 0)
+            tgt = float(r.get("target_profit_margin") or 0.20)
+            if em > 0 and em < tgt:
+                low_margin_count += 1
+        except Exception:
+            pass
+        if str(r.get("stock_status", "")).lower() in ("out_of_stock", "unknown"):
+            stock_warn_count += 1
+
+    s1, s2, s3 = st.columns(3)
+    s1.metric("商品数", len(tracker_df))
+    s2.metric("⚠️ 利益率不足", low_margin_count, delta=None)
+    s3.metric("❌ 在庫要確認", stock_warn_count, delta=None)
+
+    if low_margin_count > 0:
+        st.warning(f"⚠️ {low_margin_count} 件の商品が目標利益率を下回っています。各商品カードを確認してください。")
+    if stock_warn_count > 0:
+        st.error(f"❌ {stock_warn_count} 件の商品で在庫が「在庫なし」または「不明」です。")
+
+    st.divider()
+
+    # ── 商品カード（1件ずつ） ────────────────────────────────
+    updated_rows = []
+
+    for idx, row in tracker_df.iterrows():
+        r = row.to_dict()
+        pname = str(r.get("product_name", f"商品 {idx+1}"))
+        country = str(r.get("country", ""))
+        em = float(r.get("expected_profit_margin") or 0)
+        tgt = float(r.get("target_profit_margin") or 0.20)
+        ss = str(r.get("stock_status", "unknown")).lower()
+
+        # ヘッダー警告アイコン
+        warn_icons = ""
+        if em > 0 and em < tgt:
+            warn_icons += " ⚠️利益率不足"
+        if ss in ("out_of_stock", "unknown"):
+            warn_icons += " ❌在庫要確認"
+
+        with st.expander(f"{'📦' if not warn_icons else '⚠️'} {pname}（{country}）{warn_icons}", expanded=(bool(warn_icons))):
+
+            # ── 警告バナー ───────────────────────────────────
+            if em > 0 and em < tgt:
+                st.warning(
+                    f"利益率 **{em*100:.1f}%** が目標 **{tgt*100:.0f}%** を下回っています。"
+                    "仕入れ価格・販売価格を見直してください。"
+                )
+            if ss == "out_of_stock":
+                st.error("❌ この商品は在庫なし（out_of_stock）です。出品前に在庫を確保してください。")
+            elif ss == "unknown":
+                st.warning("❓ 在庫状況が不明です。仕入れ先を確認してください。")
+
+            # ── 仕入れ先 ─────────────────────────────────────
+            st.markdown("#### 🏪 仕入れ先")
+            sup_col1, sup_col2 = st.columns(2)
+            r["supplier_name"] = sup_col1.text_input(
+                "仕入れ先名",
+                value=str(r.get("supplier_name") or ""),
+                key=f"sup_name_{idx}",
+            )
+            r["supplier_url"] = sup_col2.text_input(
+                "仕入れ先URL",
+                value=str(r.get("supplier_url") or ""),
+                key=f"sup_url_{idx}",
+                placeholder="https://",
+            )
+
+            # ── コスト内訳 ────────────────────────────────────
+            st.markdown("#### 💴 コスト内訳（円）")
+            c1, c2 = st.columns(2)
+            r["actual_purchase_price_jpy"] = c1.number_input(
+                "実際の仕入れ価格（円）",
+                min_value=0, step=100,
+                value=int(float(r.get("actual_purchase_price_jpy") or 0)),
+                key=f"purchase_{idx}",
+            )
+            r["domestic_shipping_jpy"] = c2.number_input(
+                "国内送料（円）",
+                min_value=0, step=50,
+                value=int(float(r.get("domestic_shipping_jpy") or 0)),
+                key=f"dom_ship_{idx}",
+            )
+            c3, c4 = st.columns(2)
+            r["packaging_cost_jpy"] = c3.number_input(
+                "梱包材料費（円）",
+                min_value=0, step=50,
+                value=int(float(r.get("packaging_cost_jpy") or 0)),
+                key=f"pack_{idx}",
+            )
+            r["export_forwarding_fee_jpy"] = c4.number_input(
+                "輸出代行手数料（円）",
+                min_value=0, step=100,
+                value=int(float(r.get("export_forwarding_fee_jpy") or 0)),
+                key=f"fwd_{idx}",
+            )
+            r["international_shipping_estimate_jpy"] = st.number_input(
+                "国際送料概算（円）",
+                min_value=0, step=100,
+                value=int(float(r.get("international_shipping_estimate_jpy") or 0)),
+                key=f"intl_ship_{idx}",
+            )
+
+            total_cost = (
+                float(r["actual_purchase_price_jpy"])
+                + float(r["domestic_shipping_jpy"])
+                + float(r["packaging_cost_jpy"])
+                + float(r["export_forwarding_fee_jpy"])
+                + float(r["international_shipping_estimate_jpy"])
+            )
+            st.info(f"**合計コスト: ¥{round(total_cost):,}**")
+
+            # ── 利益目標 ──────────────────────────────────────
+            st.markdown("#### 🎯 利益目標設定")
+            m1, m2 = st.columns(2)
+            fee_rate_pct = m1.number_input(
+                "Shopee手数料率（%）",
+                min_value=0.0, max_value=50.0, step=0.5,
+                value=round(float(r.get("shopee_fee_rate") or 0.12) * 100, 1),
+                key=f"fee_{idx}",
+                help="取引手数料＋サービス料＋決済手数料の合計。通常10〜15%",
+            )
+            r["shopee_fee_rate"] = fee_rate_pct / 100.0
+            tgt_pct = m2.number_input(
+                "目標利益率（%）",
+                min_value=0.0, max_value=80.0, step=1.0,
+                value=round(float(r.get("target_profit_margin") or 0.20) * 100, 1),
+                key=f"tgt_{idx}",
+            )
+            r["target_profit_margin"] = tgt_pct / 100.0
+
+            # ── 計算結果（読み取り専用） ───────────────────────
+            recalced = recalc_row(r)
+            r["minimum_selling_price"] = recalced["minimum_selling_price"]
+            r["recommended_selling_price"] = recalced["recommended_selling_price"]
+            r["expected_profit"] = recalced["expected_profit"]
+            r["expected_profit_margin"] = recalced["expected_profit_margin"]
+
+            st.markdown("#### 📊 計算結果")
+            res1, res2, res3, res4 = st.columns(4)
+            res1.metric("損益分岐価格", f"¥{r['minimum_selling_price']:,}", help="この価格以上で売れば赤字にならない")
+            res2.metric("推奨販売価格", f"¥{r['recommended_selling_price']:,}", help="目標利益率を達成する価格")
+            res3.metric("想定利益", f"¥{r['expected_profit']:,}")
+            margin_pct = r["expected_profit_margin"] * 100
+            if margin_pct < tgt_pct and margin_pct > 0:
+                res4.metric("想定利益率", f"{margin_pct:.1f}%", delta=f"-{tgt_pct - margin_pct:.1f}%")
+            else:
+                res4.metric("想定利益率", f"{margin_pct:.1f}%")
+
+            # ── 在庫・その他 ──────────────────────────────────
+            st.markdown("#### 📦 在庫・メモ")
+            stk_col, date_col = st.columns(2)
+
+            current_stock = str(r.get("stock_status", "unknown")).lower()
+            if current_stock not in STOCK_OPTIONS:
+                current_stock = "unknown"
+            stock_idx = STOCK_OPTIONS.index(current_stock)
+            selected_stock = stk_col.selectbox(
+                "在庫状況",
+                options=STOCK_OPTIONS,
+                index=stock_idx,
+                format_func=lambda x: STOCK_LABELS.get(x, x),
+                key=f"stock_{idx}",
+            )
+            r["stock_status"] = selected_stock
+
+            r["last_checked_date"] = date_col.text_input(
+                "最終確認日",
+                value=str(r.get("last_checked_date") or ""),
+                key=f"date_{idx}",
+                placeholder="例: 2026-07-09",
+            )
+
+            r["notes"] = st.text_area(
+                "メモ・備考",
+                value=str(r.get("notes") or ""),
+                height=80,
+                key=f"notes_{idx}",
+                placeholder="気づいた点・交渉結果・代替仕入れ先など自由に記入",
+            )
+
+        updated_rows.append(r)
+
+    # セッションにリアルタイム反映
+    st.session_state["tracker_df"] = pd.DataFrame(updated_rows, columns=TRACKER_COLUMNS)
+
+    st.divider()
+    bot_col1, bot_col2, _ = st.columns([2, 2, 1])
+    save2 = bot_col1.button("💾 すべて保存（下部）", type="primary", use_container_width=True)
+    recalc2 = bot_col2.button("🔄 再計算して保存（下部）", use_container_width=True)
+
+    if save2 or recalc2:
+        rows_out = []
+        for r2 in updated_rows:
+            rows_out.append(recalc_row(r2) if recalc2 else r2)
+        final_df = pd.DataFrame(rows_out, columns=TRACKER_COLUMNS)
+        st.session_state["tracker_df"] = final_df
+        save_tracker(final_df)
+        st.success("✅ 保存しました。")
+        st.rerun()
 
 
 # ══════════════════════════════════════════════════════════
