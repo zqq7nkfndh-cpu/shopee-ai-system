@@ -171,6 +171,7 @@ with st.sidebar:
             "📝 出品下書き確認",
             "💰 利益計算シミュレーター",
             "📤 承認済みエクスポート",
+            "✅ 出品準備チェックリスト",
             "📰 noteレポート",
             "ℹ️ 使い方",
         ],
@@ -971,6 +972,240 @@ elif page == "📤 承認済みエクスポート":
             st.error("以下の商品は approved=TRUE ですが、高リスクのためエクスポートから除外しました。")
             excl_cols = [c for c in ["product_name", "risk_level", "risk_reason"] if c in rejected_df.columns]
             st.dataframe(rejected_df[excl_cols], use_container_width=True, hide_index=True)
+
+
+# ══════════════════════════════════════════════════════════
+# ✅ 出品準備チェックリスト
+# ══════════════════════════════════════════════════════════
+elif page == "✅ 出品準備チェックリスト":
+    import json as _cjson
+
+    CHECKLIST_FILE = DATA_DIR / "checklist_state.json"
+
+    CHECKLIST_ITEMS = [
+        {
+            "key": "seller_account",
+            "label": "Shopee セラーアカウントを作成した",
+            "detail": (
+                "Shopee Seller Center（https://seller.shopee.sg など）で "
+                "セラーアカウントを登録してください。"
+            ),
+            "link": "https://seller.shopee.sg/",
+            "link_label": "Shopee Seller Center を開く",
+            "category": "アカウント設定",
+        },
+        {
+            "key": "open_platform_app",
+            "label": "Shopee Open Platform でアプリを作成した",
+            "detail": (
+                "Shopee Open Platform（https://open.shopee.com）で "
+                "Partnerアカウントを作成し、アプリを登録してください。"
+            ),
+            "link": "https://open.shopee.com/",
+            "link_label": "Shopee Open Platform を開く",
+            "category": "アカウント設定",
+        },
+        {
+            "key": "api_keys_added",
+            "label": "APIキー（Partner ID / Partner Key）を Secrets に追加した",
+            "detail": (
+                "Replitの Secrets（環境変数）に以下を登録してください:\n"
+                "- SHOPEE_PARTNER_ID\n"
+                "- SHOPEE_PARTNER_KEY\n"
+                "- SHOPEE_SHOP_ID\n"
+                "- SHOPEE_ACCESS_TOKEN"
+            ),
+            "link": None,
+            "link_label": None,
+            "category": "アカウント設定",
+        },
+        {
+            "key": "test_product_added",
+            "label": "テスト商品を「商品入力エディタ」で追加した",
+            "detail": (
+                "「📥 商品入力エディタ」ページで1件だけ商品を追加し、"
+                "下書き生成・リスクチェック・利益計算を一通り確認してください。"
+            ),
+            "link": None,
+            "link_label": None,
+            "category": "テスト確認",
+        },
+        {
+            "key": "risk_check_done",
+            "label": "リスクチェックの内容を確認した",
+            "detail": (
+                "「📝 出品下書き確認」ページでリスク判定を確認しました。\n"
+                "高リスク商品は強制承認チェックボックスをオンにしないと承認できません。"
+            ),
+            "link": None,
+            "link_label": None,
+            "category": "テスト確認",
+        },
+        {
+            "key": "profit_calc_done",
+            "label": "利益計算シミュレーターで採算を確認した",
+            "detail": (
+                "「💰 利益計算シミュレーター」で仕入れ価格・送料・販売価格を入力し、"
+                "損益分岐点と利益率を確認してください。"
+            ),
+            "link": None,
+            "link_label": None,
+            "category": "テスト確認",
+        },
+        {
+            "key": "export_done",
+            "label": "承認済み商品をCSVエクスポートした",
+            "detail": (
+                "「📤 承認済みエクスポート」ページから承認済みCSVをダウンロードし、"
+                "内容を確認しました。"
+            ),
+            "link": None,
+            "link_label": None,
+            "category": "テスト確認",
+        },
+        {
+            "key": "dry_run_confirmed",
+            "label": "DRY_RUN = True のまま（まだ本番出品しない）",
+            "detail": (
+                "shopee_api.py の DRY_RUN は True のまま維持してください。\n"
+                "本番出品する準備ができたら、上記の全手順を完了してから "
+                "True → False に変更します。"
+            ),
+            "link": None,
+            "link_label": None,
+            "category": "安全確認",
+            "locked": True,
+        },
+    ]
+
+    def load_checklist() -> dict:
+        if CHECKLIST_FILE.exists():
+            try:
+                with open(CHECKLIST_FILE, encoding="utf-8") as f:
+                    return _cjson.load(f)
+            except Exception:
+                pass
+        return {item["key"]: False for item in CHECKLIST_ITEMS}
+
+    def save_checklist(state: dict) -> None:
+        CHECKLIST_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(CHECKLIST_FILE, "w", encoding="utf-8") as f:
+            _cjson.dump(state, f, ensure_ascii=False, indent=2)
+
+    checklist_state = load_checklist()
+
+    st.title("✅ Shopee 出品準備チェックリスト")
+    st.caption("本番出品前に全項目を確認してください。チェックは自動保存されます。")
+
+    # DRY_RUN バッジ
+    from shopee_api import DRY_RUN as _CL_DRY_RUN
+    if _CL_DRY_RUN:
+        st.error(
+            "🔒 **DRY_RUN = True**　｜　現在、Shopeeへの自動出品は無効です。\n\n"
+            "すべての承認・エクスポート操作はCSVへの記録のみです。"
+            "実際の出品は Shopee Seller Center で手動で行ってください。"
+        )
+    else:
+        st.success("🟢 DRY_RUN = False　｜　本番モードが有効です。出品ボタンが機能します。")
+
+    st.divider()
+
+    # 進捗バー
+    total_items = len(CHECKLIST_ITEMS)
+    checked_count = sum(1 for item in CHECKLIST_ITEMS if checklist_state.get(item["key"], False))
+    progress = checked_count / total_items
+    st.progress(progress, text=f"進捗: {checked_count} / {total_items} 項目完了")
+
+    if checked_count == total_items:
+        st.success("🎉 全項目完了！出品の準備が整いました。")
+    st.divider()
+
+    # カテゴリ別にグループ表示
+    categories = []
+    seen_cats = set()
+    for item in CHECKLIST_ITEMS:
+        cat = item["category"]
+        if cat not in seen_cats:
+            categories.append(cat)
+            seen_cats.add(cat)
+
+    cat_icons = {
+        "アカウント設定": "🔑",
+        "テスト確認": "🧪",
+        "安全確認": "🛡️",
+    }
+
+    state_changed = False
+
+    for cat in categories:
+        cat_items = [i for i in CHECKLIST_ITEMS if i["category"] == cat]
+        icon = cat_icons.get(cat, "📋")
+        st.subheader(f"{icon} {cat}")
+
+        for item in cat_items:
+            current_val = checklist_state.get(item["key"], False)
+            is_locked = item.get("locked", False)
+
+            with st.container(border=True):
+                cb_col, info_col = st.columns([1, 8])
+
+                with cb_col:
+                    if is_locked:
+                        # DRY_RUN確認項目は常にチェック済み表示（変更不可）
+                        st.markdown("🔒")
+                        new_val = True
+                    else:
+                        new_val = st.checkbox(
+                            "チェック",
+                            value=current_val,
+                            key=f"cl_{item['key']}",
+                            label_visibility="collapsed",
+                        )
+                        if new_val != current_val:
+                            checklist_state[item["key"]] = new_val
+                            state_changed = True
+
+                with info_col:
+                    if current_val or is_locked:
+                        st.markdown(f"**✅ ~~{item['label']}~~**")
+                    else:
+                        st.markdown(f"**🔲 {item['label']}**")
+
+                    if item["detail"]:
+                        st.caption(item["detail"])
+
+                    if item.get("link"):
+                        st.markdown(f"[🔗 {item['link_label']}]({item['link']})")
+
+        st.write("")
+
+    if state_changed:
+        save_checklist(checklist_state)
+        st.rerun()
+
+    st.divider()
+
+    # リセットボタン
+    reset_col, _ = st.columns([1, 3])
+    with reset_col:
+        if st.button("🔄 チェックをリセット", use_container_width=True):
+            blank = {item["key"]: False for item in CHECKLIST_ITEMS}
+            save_checklist(blank)
+            st.rerun()
+
+    # 次のステップ案内
+    st.divider()
+    st.subheader("📋 本番出品に向けた次のステップ")
+    st.markdown("""
+1. **上記のチェックリストを全て完了する**
+2. **Shopee Open Platform API の審査を通過する**（数日〜数週間かかる場合があります）
+3. **`shopee_api.py` の `DRY_RUN = True` → `False` に変更する**
+4. **「📤 承認済みエクスポート」ページの「Shopeeへ出品する」ボタンが有効になる**
+5. **少量（1〜3件）でテスト出品して動作確認する**
+6. **問題なければ本格運用開始**
+
+> ⚠️ DRY_RUN を False にする前に、必ず API の動作テストを行ってください。
+    """)
 
 
 # ══════════════════════════════════════════════════════════
