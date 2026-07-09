@@ -173,6 +173,7 @@ with st.sidebar:
             "📤 承認済みエクスポート",
             "✅ 出品準備チェックリスト",
             "💴 仕入れ・価格トラッカー",
+            "🔍 自動リサーチ",
             "📰 noteレポート",
             "ℹ️ 使い方",
         ],
@@ -1544,6 +1545,282 @@ elif page == "💴 仕入れ・価格トラッカー":
         save_tracker(final_df)
         st.success("✅ 保存しました。")
         st.rerun()
+
+
+# ══════════════════════════════════════════════════════════
+# 🔍 自動リサーチ
+# ══════════════════════════════════════════════════════════
+elif page == "🔍 自動リサーチ":
+    import auto_research as _ar
+
+    COUNTRIES_ALL = ["Singapore", "Malaysia", "Taiwan", "Philippines", "Thailand", "Vietnam"]
+    SEASON_LABELS = {"spring": "🌸 春", "summer": "☀️ 夏", "autumn": "🍂 秋", "winter": "❄️ 冬"}
+    SCORE_DIMS = [
+        ("score_overseas_demand",  "海外需要"),
+        ("score_japan_uniqueness", "日本独自性"),
+        ("score_shipping_ease",    "配送しやすさ"),
+        ("score_regulation_risk",  "規制リスク（低い=良）"),
+        ("score_profit_potential", "利益ポテンシャル"),
+    ]
+
+    def _score_bar(val: int, max_val: int = 5, invert: bool = False) -> str:
+        effective = (max_val + 1 - val) if invert else val
+        filled = "●" * effective
+        empty  = "○" * (max_val - effective)
+        return filled + empty
+
+    st.title("🔍 自動商品リサーチ")
+    st.caption(
+        "日本商品データベース（60+件）から海外Shopeeで売れる商品候補を自動スコアリング。"
+        "高リスクカテゴリ（食品・化粧品・医薬品・電池・液体など）は自動除外されます。"
+        "Shopeeへの出品は行いません。DRY_RUN=True。"
+    )
+
+    # ── 現在の季節・イベント情報 ─────────────────────────────
+    current_season = _ar.get_current_season()
+    events = _ar.get_seasonal_events()
+    season_icon = SEASON_LABELS.get(current_season, current_season)
+    info_col, _ = st.columns([3, 1])
+    with info_col:
+        event_str = "、".join(events) if events else "なし"
+        st.info(f"**現在の季節: {season_icon}**　｜　今月のイベント: {event_str}")
+
+    st.divider()
+
+    # ── 検索フィルター ────────────────────────────────────────
+    st.subheader("🎛️ リサーチ条件")
+
+    kw_col, market_col = st.columns(2)
+    with kw_col:
+        keyword_input = st.text_input(
+            "キーワード（任意・カンマ区切り）",
+            placeholder="例: stationery, kitchen, bento",
+            help="空欄の場合は全商品が対象になります",
+        )
+        keywords = [k.strip() for k in keyword_input.split(",") if k.strip()]
+
+    with market_col:
+        target_countries = st.multiselect(
+            "対象市場",
+            options=COUNTRIES_ALL,
+            default=["Singapore", "Taiwan", "Malaysia"],
+        )
+
+    opt_col1, opt_col2, opt_col3 = st.columns(3)
+    with opt_col1:
+        season_override = st.selectbox(
+            "季節（変更可）",
+            options=["自動検出", "spring", "summer", "autumn", "winter"],
+            format_func=lambda x: "🔄 自動検出" if x == "自動検出" else SEASON_LABELS.get(x, x),
+        )
+        season_val = None if season_override == "自動検出" else season_override
+
+    with opt_col2:
+        min_score = st.slider("最低スコア", min_value=0, max_value=90, value=60, step=5)
+
+    with opt_col3:
+        target_margin_pct = st.number_input(
+            "目標利益率（%）", min_value=10, max_value=60, value=30, step=5
+        )
+
+    n_results = st.slider("最大表示件数", min_value=5, max_value=40, value=15, step=5)
+
+    st.divider()
+
+    # ── リサーチ実行ボタン ────────────────────────────────────
+    run_col, clear_col = st.columns([3, 1])
+    with run_col:
+        run_research = st.button(
+            "🔍 新しい商品アイデアを探す",
+            type="primary",
+            use_container_width=True,
+        )
+    with clear_col:
+        clear_btn = st.button("🗑️ 結果をクリア", use_container_width=True)
+
+    if clear_btn:
+        st.session_state.pop("research_results", None)
+        st.session_state.pop("research_selected", None)
+        st.rerun()
+
+    if run_research:
+        with st.spinner("商品データベースをスコアリング中..."):
+            results = _ar.run_research(
+                keywords=keywords,
+                countries=target_countries,
+                min_score=min_score,
+                season_override=season_val,
+                target_margin=target_margin_pct / 100,
+                n_results=n_results,
+            )
+        _ar.save_research_results(results)
+        st.session_state["research_results"] = results
+        st.session_state["research_selected"] = {}
+        st.success(f"✅ {len(results)} 件の商品候補が見つかりました。")
+        st.rerun()
+
+    # ── 結果表示 ──────────────────────────────────────────────
+    results: list[dict] = st.session_state.get("research_results") or _ar.load_research_results()
+
+    if not results:
+        st.info(
+            "まだリサーチ結果がありません。\n\n"
+            "上の条件を設定して「🔍 新しい商品アイデアを探す」を押してください。"
+        )
+        st.stop()
+
+    if "research_selected" not in st.session_state:
+        st.session_state["research_selected"] = {}
+
+    selected_map: dict = st.session_state["research_selected"]
+
+    st.subheader(f"📊 リサーチ結果（{len(results)} 件）")
+
+    # 全選択/全解除
+    sel_all_col, desel_all_col, _ = st.columns([1, 1, 3])
+    with sel_all_col:
+        if st.button("☑️ 全選択", use_container_width=True):
+            for i, r in enumerate(results):
+                selected_map[i] = True
+            st.session_state["research_selected"] = selected_map
+            st.rerun()
+    with desel_all_col:
+        if st.button("□ 全解除", use_container_width=True):
+            st.session_state["research_selected"] = {}
+            st.rerun()
+
+    st.divider()
+
+    for i, product in enumerate(results):
+        score = product.get("score", 0)
+        name  = product.get("product_name_ja", "")
+        genre = product.get("genre", "")
+        trend = product.get("trend_reason", "")
+        countries_list = ", ".join(product.get("countries", []))
+        selling_price = product.get("selling_price_jpy", 0)
+        profit = product.get("profit_jpy", 0)
+        margin = product.get("profit_margin_pct", 0)
+        cost   = product.get("typical_cost_jpy", 0)
+        ship   = product.get("typical_shipping_jpy", 0)
+        weight = product.get("typical_weight_g", 0)
+
+        # スコアバッジ色
+        if score >= 80:
+            score_badge = f"🟢 **{score}点**"
+        elif score >= 65:
+            score_badge = f"🟡 **{score}点**"
+        else:
+            score_badge = f"🔴 **{score}点**"
+
+        is_selected = selected_map.get(i, False)
+        header_prefix = "✅" if is_selected else "🔲"
+
+        with st.container(border=True):
+            hdr_col, score_col, chk_col = st.columns([5, 2, 1])
+            with hdr_col:
+                st.markdown(f"#### {header_prefix} {name}")
+                st.caption(f"ジャンル: {genre}　｜　推奨市場: {countries_list}")
+            with score_col:
+                st.markdown(f"総合スコア: {score_badge}")
+            with chk_col:
+                new_val = st.checkbox(
+                    "選択",
+                    value=is_selected,
+                    key=f"sel_{i}",
+                    label_visibility="collapsed",
+                )
+                if new_val != is_selected:
+                    selected_map[i] = new_val
+                    st.session_state["research_selected"] = selected_map
+                    st.rerun()
+
+            # 価格・利益メトリクス
+            m1, m2, m3, m4, m5 = st.columns(5)
+            m1.metric("仕入れ目安", f"¥{int(cost):,}")
+            m2.metric("国際送料目安", f"¥{int(ship):,}")
+            m3.metric("推奨販売価格", f"¥{int(selling_price):,}")
+            m4.metric("想定利益", f"¥{int(profit):,}")
+            m5.metric("利益率", f"{margin:.1f}%")
+
+            # トレンド理由
+            st.markdown(f"💡 **トレンド理由:** {trend}")
+            st.caption(f"🎯 ターゲット顧客: {product.get('target_customer', '')}")
+            st.caption(f"📦 重量目安: {weight}g　｜　季節: {', '.join(product.get('seasons', ['all']))}")
+
+            # 5軸スコア詳細
+            with st.expander("📊 スコア内訳を見る"):
+                for dim_key, dim_label in SCORE_DIMS:
+                    val = product.get(dim_key, 3)
+                    invert = "regulation" in dim_key
+                    bar = _score_bar(val, invert=invert)
+                    st.markdown(f"**{dim_label}**: {bar} ({val}/5)")
+
+        st.write("")
+
+    # ── 下書き生成セクション ──────────────────────────────────
+    st.divider()
+    selected_indices = [i for i, v in selected_map.items() if v]
+    selected_products = [results[i] for i in selected_indices if i < len(results)]
+    n_selected = len(selected_products)
+
+    st.subheader(f"📝 下書き生成（{n_selected} 件選択中）")
+
+    if n_selected == 0:
+        st.info("商品カードのチェックボックスで下書きにする商品を選んでください。")
+    else:
+        draft_country_col, draft_margin_col = st.columns(2)
+        with draft_country_col:
+            draft_countries = st.multiselect(
+                "出品する国（空欄=商品ごとの推奨国）",
+                options=COUNTRIES_ALL,
+                default=[],
+                help="空欄にすると各商品の推奨国に合わせて自動的に国を選択します",
+            )
+        with draft_margin_col:
+            draft_margin_pct = st.number_input(
+                "下書き目標利益率（%）", min_value=10, max_value=60, value=30, step=5,
+                key="draft_margin",
+            )
+
+        gen_col, _ = st.columns([2, 3])
+        with gen_col:
+            if st.button(
+                f"📝 選択した {n_selected} 件の下書きを生成する",
+                type="primary",
+                use_container_width=True,
+            ):
+                with st.spinner("出品下書きを生成中..."):
+                    drafts = _ar.generate_drafts_from_research(
+                        selected_products=selected_products,
+                        countries=draft_countries,
+                        target_margin=draft_margin_pct / 100,
+                    )
+                    added, skipped = _ar.append_drafts_to_csv(drafts)
+
+                if added > 0:
+                    st.success(
+                        f"✅ **{added} 件の下書きを生成しました。**\n\n"
+                        f"「📝 出品下書き確認」ページで内容を確認・承認してください。"
+                        + (f"\n（{skipped} 件は既存データと重複したためスキップ）" if skipped else "")
+                    )
+                else:
+                    st.warning(
+                        f"⚠️ 選択した商品はすでに下書きに存在します（{skipped} 件スキップ）。\n\n"
+                        "「📝 出品下書き確認」ページを確認してください。"
+                    )
+
+        # 将来の出品ボタン（DRY_RUN=True の間は無効）
+        st.divider()
+        st.caption("━━ 将来機能（現在は無効）━━")
+        from shopee_api import DRY_RUN as _RES_DRY_RUN
+        st.button(
+            "🚀 承認済み商品をShopeeへ出品する（DRY_RUN=True のため無効）",
+            disabled=True,
+            use_container_width=True,
+            help="shopee_api.py の DRY_RUN=False に変更すると有効になります。現在は出品しません。",
+        )
+        if _RES_DRY_RUN:
+            st.caption("🔒 DRY_RUN=True — Shopeeへの自動出品は無効です。すべての操作はCSVへの記録のみです。")
 
 
 # ══════════════════════════════════════════════════════════
