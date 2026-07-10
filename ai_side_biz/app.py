@@ -1842,7 +1842,6 @@ elif page == "📰 noteレポート":
         week_num = (today.day - 1) // 7 + 1
         return {
             "week_label": f"{today.year}年{today.month}月 第{week_num}週",
-            "rakuten_room": {"posts_made": 0, "clicks": 0, "estimated_reward_jpy": 0},
             "shopee": {"listings_approved": 0, "orders": 0, "revenue_jpy": 0, "profit_jpy": 0},
             "shorts_script_ideas": [],
             "failures": [],
@@ -1917,7 +1916,6 @@ elif page == "📰 noteレポート":
         if save_and_regen:
             new_data = {
                 "week_label": week_label.strip() or wk.get("week_label", ""),
-                "rakuten_room": {"posts_made": 0, "clicks": 0, "estimated_reward_jpy": 0},
                 "shopee": {
                     "listings_approved": int(s_listings),
                     "orders": int(s_orders),

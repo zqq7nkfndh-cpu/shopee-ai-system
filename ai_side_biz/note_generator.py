@@ -46,18 +46,12 @@ def _format_table(rows, columns, headers=None):
 
 def build_report_markdown() -> str:
     today = datetime.date.today().isoformat()
-    rakuten_rows = _load_csv(OUTPUT_DIR / "rakuten_room_candidates.csv")[:5]
     shopee_rows = _load_csv(OUTPUT_DIR / "shopee_listing_drafts.csv")[:5]
     wk = _load_weekly_results()
 
-    room_table = _format_table(
-        rakuten_rows,
-        ["product_name", "trend_reason", "season_reason", "risk_level"],
-        ["商品名", "選定理由(トレンド)", "季節理由", "リスク判定"],
-    )
     shopee_table = _format_table(
         shopee_rows,
-        ["country", "product_name", "selling_price", "profit", "profit_margin", "risk_level"],
+        ["country", "product_name", "selling_price_jpy", "profit_jpy", "profit_margin", "risk_level"],
         ["国", "商品名", "想定販売価格(円)", "想定利益(円)", "利益率", "リスク判定"],
     )
 
@@ -65,7 +59,6 @@ def build_report_markdown() -> str:
     failures = "\n".join(f"- {f}" for f in wk.get("failures", []))
     improvements = "\n".join(f"- {i}" for i in wk.get("improvements", []))
 
-    room = wk.get("rakuten_room", {})
     shopee = wk.get("shopee", {})
 
     report = f"""# AI副業実験ログ - {wk.get('week_label', today)}
@@ -73,14 +66,7 @@ def build_report_markdown() -> str:
 > このログはAIで自動生成した"下書き"を元に、実際に自分で試した結果をまとめています。
 > 誇大な収益アピールを目的としたものではなく、良かった点も悪かった点も正直に記録しています。
 
-## 1. 今週リサーチした楽天ROOM候補商品
-
-{room_table}
-
-※ 上記はAIが下書きした投稿候補です。実際に投稿したのはこの中から自分で選んだものだけです。
-※ 楽天ROOMへの投稿・画像の扱いはすべて手動で行っています(自動投稿ツールは使っていません)。
-
-## 2. 今週のShopee出品候補
+## 1. 今週のShopee出品候補
 
 {shopee_table}
 
@@ -88,36 +74,28 @@ def build_report_markdown() -> str:
 　出品前にShopee Seller Centerで最新の手数料を確認しています。
 ※ 出品は下書き止まりで、実際に出品したのは自分で内容を確認し承認したものだけです。
 
-## 3. ショート動画台本アイデア
+## 2. ショート動画台本アイデア
 
 {shorts_scripts if shorts_scripts else "- (今週は特になし)"}
 
-## 4. 今週の収益(概算・自己申告ベース)
+## 3. 今週の収益(概算・自己申告ベース)
 
-| 項目 | 楽天ROOM | Shopee |
-|---|---|---|
-| 投稿/出品数 | {room.get('posts_made', 0)} | {shopee.get('listings_approved', 0)} |
-| クリック/注文数 | {room.get('clicks', 0)} | {shopee.get('orders', 0)} |
-| 想定報酬/売上(円) | {room.get('estimated_reward_jpy', 0)} | {shopee.get('revenue_jpy', 0)} |
-| 想定利益(円) | - | {shopee.get('profit_jpy', 0)} |
+| 項目 | Shopee |
+|---|---|
+| 出品数 | {shopee.get('listings_approved', 0)} |
+| 注文数 | {shopee.get('orders', 0)} |
+| 売上(円) | {shopee.get('revenue_jpy', 0)} |
+| 利益(円) | {shopee.get('profit_jpy', 0)} |
 
-## 5. うまくいかなかったこと
+## 4. うまくいかなかったこと
 
 {failures if failures else "- (今週は特になし)"}
 
-## 6. 来週への改善点
+## 5. 来週への改善点
 
 {improvements if improvements else "- (今週は特になし)"}
 
-## 7. 実際に使ったプロンプト・テンプレート(読者が真似できるように公開)
-
-**楽天ROOM投稿文生成プロンプト(要旨):**
-```
-商品名と季節キーワードを渡し、以下の条件で3パターンの投稿文を作る。
-・薬機法や景品表示法に触れる断定表現は使わない
-・「個人の感想」であることが伝わる一文を入れる
-・80〜120文字程度で3パターン作る
-```
+## 6. 実際に使ったプロンプト・テンプレート(読者が真似できるように公開)
 
 **Shopee英語コピー生成プロンプト(要旨):**
 ```
