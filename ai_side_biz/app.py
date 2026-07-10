@@ -5,12 +5,15 @@ app.py — AI副業システム (Shopee専用) Streamlit Web UI
 import io
 import json as _json
 import datetime as _dt
-import subprocess
-import sys
+import contextlib
+import traceback
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import shopee_research
+import note_generator
+import dashboard
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "outputs"
@@ -42,12 +45,22 @@ st.set_page_config(
 # ── ヘルパー ──────────────────────────────────────────────────────────────────
 
 def run_task(command: str) -> tuple[bool, str]:
-    result = subprocess.run(
-        [sys.executable, "main.py", command],
-        cwd=str(BASE_DIR),
-        capture_output=True, text=True, timeout=120,
-    )
-    return result.returncode == 0, result.stdout + result.stderr
+    task_map = {
+        "shopee": shopee_research.run,
+        "note": note_generator.run,
+        "dashboard": dashboard.run,
+    }
+    runner = task_map.get(command)
+    if runner is None:
+        return False, f"unsupported command: {command}"
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            runner()
+        return True, buf.getvalue()
+    except Exception:
+        traceback.print_exc(file=buf)
+        return False, buf.getvalue()
 
 
 def load_csv(filename: str) -> pd.DataFrame | None:
@@ -1009,9 +1022,9 @@ elif page == "✅ 出品準備チェックリスト":
         },
         {
             "key": "api_keys_added",
-            "label": "APIキー（Partner ID / Partner Key）を Secrets に追加した",
+            "label": "APIキー（Partner ID / Partner Key）を環境変数に追加した",
             "detail": (
-                "Replitの Secrets（環境変数）に以下を登録してください:\n"
+                "環境変数（.env など）に以下を登録してください:\n"
                 "- SHOPEE_PARTNER_ID\n"
                 "- SHOPEE_PARTNER_KEY\n"
                 "- SHOPEE_SHOP_ID\n"
@@ -1842,7 +1855,6 @@ elif page == "📰 noteレポート":
         week_num = (today.day - 1) // 7 + 1
         return {
             "week_label": f"{today.year}年{today.month}月 第{week_num}週",
-            "rakuten_room": {"posts_made": 0, "clicks": 0, "estimated_reward_jpy": 0},
             "shopee": {"listings_approved": 0, "orders": 0, "revenue_jpy": 0, "profit_jpy": 0},
             "shorts_script_ideas": [],
             "failures": [],
@@ -1917,7 +1929,6 @@ elif page == "📰 noteレポート":
         if save_and_regen:
             new_data = {
                 "week_label": week_label.strip() or wk.get("week_label", ""),
-                "rakuten_room": {"posts_made": 0, "clicks": 0, "estimated_reward_jpy": 0},
                 "shopee": {
                     "listings_approved": int(s_listings),
                     "orders": int(s_orders),

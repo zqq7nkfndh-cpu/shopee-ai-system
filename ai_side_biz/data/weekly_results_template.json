@@ -1,10 +1,5 @@
 {
   "week_label": "2026年7月 第1週",
-  "rakuten_room": {
-    "posts_made": 0,
-    "clicks": 0,
-    "estimated_reward_jpy": 0
-  },
   "shopee": {
     "listings_approved": 0,
     "orders": 0,
@@ -13,7 +8,7 @@
   },
   "shorts_script_ideas": [
     "商品を開封して1文でレビューする15秒動画",
-    "楽天ROOMで見つけた季節アイテムをビフォーアフター風に紹介する動画"
+    "売れ筋商品の比較ポイントを30秒で紹介する動画"
   ],
   "failures": [
     "例: 出品下書きの英語タイトルが長すぎて表示が切れた"
