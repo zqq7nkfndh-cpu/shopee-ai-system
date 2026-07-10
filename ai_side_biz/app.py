@@ -5,12 +5,14 @@ app.py — AI副業システム (Shopee専用) Streamlit Web UI
 import io
 import json as _json
 import datetime as _dt
-import subprocess
-import sys
+import contextlib
+import traceback
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import shopee_research
+import dashboard
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "outputs"
@@ -42,12 +44,21 @@ st.set_page_config(
 # ── ヘルパー ──────────────────────────────────────────────────────────────────
 
 def run_task(command: str) -> tuple[bool, str]:
-    result = subprocess.run(
-        [sys.executable, "main.py", command],
-        cwd=str(BASE_DIR),
-        capture_output=True, text=True, timeout=120,
-    )
-    return result.returncode == 0, result.stdout + result.stderr
+    task_map = {
+        "shopee": shopee_research.run,
+        "dashboard": dashboard.run,
+    }
+    runner = task_map.get(command)
+    if runner is None:
+        return False, f"unsupported command: {command}"
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            runner()
+        return True, buf.getvalue()
+    except Exception:
+        traceback.print_exc(file=buf)
+        return False, buf.getvalue()
 
 
 def load_csv(filename: str) -> pd.DataFrame | None:
@@ -174,7 +185,6 @@ with st.sidebar:
             "✅ 出品準備チェックリスト",
             "💴 仕入れ・価格トラッカー",
             "🔍 自動リサーチ",
-            "📰 noteレポート",
             "ℹ️ 使い方",
         ],
         label_visibility="collapsed",
@@ -1009,9 +1019,9 @@ elif page == "✅ 出品準備チェックリスト":
         },
         {
             "key": "api_keys_added",
-            "label": "APIキー（Partner ID / Partner Key）を Secrets に追加した",
+            "label": "APIキー（Partner ID / Partner Key）を環境変数に追加した",
             "detail": (
-                "Replitの Secrets（環境変数）に以下を登録してください:\n"
+                "環境変数（.env など）に以下を登録してください:\n"
                 "- SHOPEE_PARTNER_ID\n"
                 "- SHOPEE_PARTNER_KEY\n"
                 "- SHOPEE_SHOP_ID\n"
@@ -1824,140 +1834,6 @@ elif page == "🔍 自動リサーチ":
 
 
 # ══════════════════════════════════════════════════════════
-# 📰 noteレポート
-# ══════════════════════════════════════════════════════════
-elif page == "📰 noteレポート":
-    import json as _json2
-    import datetime as _dt2
-
-    WEEKLY_RESULTS_FILE = DATA_DIR / "weekly_results.json"
-    WEEKLY_RESULTS_TEMPLATE = DATA_DIR / "weekly_results_template.json"
-
-    def load_weekly_results() -> dict:
-        src = WEEKLY_RESULTS_FILE if WEEKLY_RESULTS_FILE.exists() else WEEKLY_RESULTS_TEMPLATE
-        if src.exists():
-            with open(src, encoding="utf-8") as f:
-                return _json2.load(f)
-        today = _dt2.date.today()
-        week_num = (today.day - 1) // 7 + 1
-        return {
-            "week_label": f"{today.year}年{today.month}月 第{week_num}週",
-            "shopee": {"listings_approved": 0, "orders": 0, "revenue_jpy": 0, "profit_jpy": 0},
-            "shorts_script_ideas": [],
-            "failures": [],
-            "improvements": [],
-        }
-
-    def save_weekly_results(data: dict) -> None:
-        DATA_DIR.mkdir(exist_ok=True)
-        with open(WEEKLY_RESULTS_FILE, "w", encoding="utf-8") as f:
-            _json2.dump(data, f, ensure_ascii=False, indent=2)
-
-    st.title("📰 note 週次レポート下書き")
-    st.info("⚠️ 下書きです。自分の言葉・実際の数値を加筆修正してから公開してください。")
-
-    with st.expander("📊 今週の実績データを入力する", expanded=not (OUTPUT_DIR / "note_weekly_report.md").exists()):
-        wk = load_weekly_results()
-        shopee_wk = wk.get("shopee", {})
-
-        with st.form("weekly_results_form"):
-            st.markdown("### 📅 週ラベル")
-            week_label = st.text_input(
-                "週ラベル",
-                value=wk.get("week_label", ""),
-                placeholder="例: 2026年7月 第2週",
-                label_visibility="collapsed",
-            )
-
-            st.markdown("### 🌏 Shopee 実績")
-            s1, s2, s3, s4 = st.columns(4)
-            with s1:
-                s_listings = st.number_input("出品数", min_value=0, value=int(shopee_wk.get("listings_approved", 0)), step=1)
-            with s2:
-                s_orders = st.number_input("注文数", min_value=0, value=int(shopee_wk.get("orders", 0)), step=1)
-            with s3:
-                s_revenue = st.number_input("売上（円）", min_value=0, value=int(shopee_wk.get("revenue_jpy", 0)), step=100)
-            with s4:
-                s_profit = st.number_input("利益（円）", min_value=0, value=int(shopee_wk.get("profit_jpy", 0)), step=100)
-
-            st.markdown("### ❌ うまくいかなかったこと（1行1件）")
-            failures_raw = st.text_area(
-                "失敗・課題",
-                value="\n".join(wk.get("failures", [])),
-                height=100,
-                placeholder="例: 出品タイトルが60文字を超えて表示が切れた",
-                label_visibility="collapsed",
-            )
-
-            st.markdown("### ✅ 来週への改善点（1行1件）")
-            improvements_raw = st.text_area(
-                "改善点",
-                value="\n".join(wk.get("improvements", [])),
-                height=100,
-                placeholder="例: 次週はタイトルを60文字以内に修正する",
-                label_visibility="collapsed",
-            )
-
-            st.markdown("### 🎬 ショート動画アイデア（任意）")
-            shorts_raw = st.text_area(
-                "ショートアイデア",
-                value="\n".join(wk.get("shorts_script_ideas", [])),
-                height=70,
-                placeholder="例: 開封15秒レビュー動画",
-                label_visibility="collapsed",
-            )
-
-            save_and_regen = st.form_submit_button(
-                "💾 保存して下書きを再生成",
-                use_container_width=True,
-                type="primary",
-            )
-
-        if save_and_regen:
-            new_data = {
-                "week_label": week_label.strip() or wk.get("week_label", ""),
-                "shopee": {
-                    "listings_approved": int(s_listings),
-                    "orders": int(s_orders),
-                    "revenue_jpy": int(s_revenue),
-                    "profit_jpy": int(s_profit),
-                },
-                "failures": [l.strip() for l in failures_raw.splitlines() if l.strip()],
-                "improvements": [l.strip() for l in improvements_raw.splitlines() if l.strip()],
-                "shorts_script_ideas": [l.strip() for l in shorts_raw.splitlines() if l.strip()],
-            }
-            save_weekly_results(new_data)
-            with st.spinner("下書きを生成中..."):
-                ok, out = run_task("note")
-            if ok:
-                st.success("✅ 保存して下書きを再生成しました！")
-            else:
-                st.error("❌ 生成に失敗しました")
-                st.code(out)
-            st.rerun()
-
-    st.divider()
-    regen_button("🔄 下書きのみ再生成", "note", "note_weekly_report.md")
-    st.divider()
-
-    md = load_md("note_weekly_report.md")
-    if md is None:
-        st.warning("まだ下書きがありません。上のフォームでデータを入力して「保存して再生成」してください。")
-        st.stop()
-
-    tab1, tab2 = st.tabs(["👁️ プレビュー", "📋 テキストコピー用"])
-    with tab1:
-        st.markdown(md)
-    with tab2:
-        st.text_area(
-            "全文コピー用",
-            value=md,
-            height=600,
-            label_visibility="collapsed",
-        )
-
-
-# ══════════════════════════════════════════════════════════
 # ℹ️ 使い方
 # ══════════════════════════════════════════════════════════
 elif page == "ℹ️ 使い方":
@@ -1971,7 +1847,6 @@ elif page == "ℹ️ 使い方":
 | 出品下書き確認 | 英語コピー・利益計算・リスクチェック結果を確認 |
 | 利益計算シミュレーター | 価格・手数料を変えて利益を試算 |
 | 承認済みエクスポート | 承認済み・低/中リスク商品のCSV/JSONをダウンロード |
-| noteレポート | 週次の実績をまとめたnote記事の下書きを生成 |
 | ダッシュボード | 全商品のリスク・承認状況を一覧表示 |
     """)
 

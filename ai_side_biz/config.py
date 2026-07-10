@@ -21,6 +21,7 @@ SHOPEE_PARTNER_KEY = os.getenv("SHOPEE_PARTNER_KEY", "")
 SHOPEE_SHOP_ID = os.getenv("SHOPEE_SHOP_ID", "")
 SHOPEE_ACCESS_TOKEN = os.getenv("SHOPEE_ACCESS_TOKEN", "")
 
+
 # --- 為替レート (Shopee利益計算用概算。運用時は最新レートに更新) ---
 DEFAULT_JPY_PER_USD = float(os.getenv("JPY_PER_USD", "150"))
 

@@ -1,23 +1,24 @@
 # Shopee AI副業システム
 
-Shopee専用のリサーチ・利益計算・出品下書き管理を行うローカルPythonツールです。  
-最終的な出品可否の判断と実行は必ず人間が行います。
+Shopee専用のStreamlit運用ツールです。  
+AIで出品候補を作成し、**人間の承認後にのみ**出品へ進める運用を前提にしています。
 
 ## できること
 
 - Shopee向け商品候補の入力・管理（CSV）
-- 出品下書きCSVの生成（英語タイトル/説明、利益計算、リスク判定）
-- 承認/却下フロー（Streamlit UIから更新）
-- 承認済み商品のCSV/JSONエクスポート
+- 利益計算（手数料・送料・利益率・最低価格）
+- 英語タイトル/説明文の下書き生成
+- リスクチェック（高リスク商品の警告）
+- 承認/却下フロー
+- 承認済みCSV/JSONエクスポート
 - DRY_RUN前提のShopee APIプレースホルダー
-- 週次レポート（note下書き）生成
 
 ## セットアップ
 
 ```bash
 cd ai_side_biz
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate   # Windowsは venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
@@ -25,27 +26,26 @@ cp .env.example .env
 ## 起動
 
 ```bash
+cd ai_side_biz
 streamlit run app.py
 ```
 
-## 補助コマンド
+## 主なファイル
 
-```bash
-python main.py shopee
-python main.py dashboard
-python main.py note
-python main.py all
-```
+- `data/shopee_trend_input.csv` : 入力データ
+- `outputs/shopee_listing_drafts.csv` : 出品下書き
+- `outputs/dashboard.csv` : 統合管理CSV
 
-## 主要ファイル
+## 運用フロー
 
-- 入力: `data/shopee_trend_input.csv`（なければテンプレート利用）
-- 出品下書き: `outputs/shopee_listing_drafts.csv`
-- ダッシュボードCSV: `outputs/dashboard.csv`
-- 週次レポート: `outputs/note_weekly_report.md`
+1. 商品入力エディタで候補を登録
+2. 出品下書きを生成
+3. 下書き確認ページで利益・リスク・説明文を確認
+4. 承認/却下を実行
+5. 承認済みのみエクスポートしてShopee Seller Centerで手動出品
 
-## 運用上の注意
+## 安全運用
 
-- `approved=TRUE` は「承認済み記録」のみで、出品実行ではありません
-- 高リスク商品は必ず人間が再確認してください
-- `shopee_api.py` は初期状態 `DRY_RUN=True` のまま運用してください
+- 高リスク商品は承認前に必ず人間が確認
+- `shopee_api.py` は `DRY_RUN=True`（初期値）を維持
+- 本番API連携は準備完了後に段階的に実施
