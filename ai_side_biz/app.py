@@ -156,8 +156,10 @@ def update_draft_csv(product_name: str, country: str, updates: dict) -> bool:
 
         if col == "approved":
             df[col] = df[col].map(
-                lambda x: str(x).strip().lower() in ("true", "1", "yes")
-                if pd.notna(x) else False
+                lambda x: x if isinstance(x, bool) else (
+                    str(x).strip().lower() in ("true", "1", "yes")
+                    if pd.notna(x) else False
+                )
             ).astype("boolean")
             df.loc[mask, col] = bool(val)
         else:
