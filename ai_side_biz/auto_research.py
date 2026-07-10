@@ -884,7 +884,7 @@ def generate_drafts_from_research(
                 "selling_points": copy["selling_points"],
                 "caution_notes": copy["caution_notes"],
                 "status": "draft_pending_human_approval",
-                "approved": "FALSE",
+                "approved": False,
             })
             drafts.append(row)
 
