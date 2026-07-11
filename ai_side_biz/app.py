@@ -160,6 +160,7 @@ def update_draft_csv(product_name: str, country: str, updates: dict) -> bool:
             df[col] = df[col].map(
                 lambda x: bool(x) if isinstance(x, bool) else (
                     str(x).strip().lower() in ("true", "1", "yes")
+                    if pd.notna(x) else False
                 )
             ).astype(bool)
             df.loc[mask, col] = bool(val)
@@ -186,9 +187,10 @@ def _sync_dashboard_csv(product_name: str, updates: dict) -> None:
             if row.get("product_name", "") == str(product_name):
                 for col, val in updates.items():
                     if col in row:
-                        row[col] = "True" if (col == "approved" and val) else (
-                            "False" if col == "approved" else str(val)
-                        )
+                        if col == "approved":
+                            row[col] = "True" if val else "False"
+                        else:
+                            row[col] = str(val)
             rows.append(row)
     with open(dashboard_file, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
