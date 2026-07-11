@@ -3,6 +3,7 @@
 app.py — AI副業システム (Shopee専用) Streamlit Web UI
 """
 import io
+import csv
 import json as _json
 import datetime as _dt
 import contextlib
@@ -153,20 +154,48 @@ def update_draft_csv(product_name: str, country: str, updates: dict) -> bool:
     for col, val in updates.items():
         if col not in df.columns:
             df[col] = False if col == "approved" else ""
-
         if col == "approved":
+            # Normalize the entire column to plain bool (non-nullable) to avoid
+            # pandas 3.x CoW / nullable-BooleanDtype conflicts with df.loc assignment.
             df[col] = df[col].map(
-                lambda x: x if isinstance(x, bool) else (
+                lambda x: bool(x) if isinstance(x, bool) else (
                     str(x).strip().lower() in ("true", "1", "yes")
                     if pd.notna(x) else False
                 )
-            ).astype("boolean")
+            ).astype(bool)
             df.loc[mask, col] = bool(val)
         else:
-            df[col] = df[col].astype("string")
+            # Direct string assignment — no dtype coercion needed.
             df.loc[mask, col] = str(val)
     df.to_csv(DRAFTS_FILE, index=False, encoding="utf-8-sig")
+    # Keep dashboard.csv in sync so the dashboard page reflects approvals immediately.
+    _sync_dashboard_csv(product_name, updates)
     return True
+
+
+def _sync_dashboard_csv(product_name: str, updates: dict) -> None:
+    """dashboard.csv の対応行を shopee_listing_drafts.csv の変更に合わせて更新する"""
+    dashboard_file = OUTPUT_DIR / "dashboard.csv"
+    if not dashboard_file.exists():
+        return
+    rows: list[dict] = []
+    fieldnames: list[str] = []
+    with open(dashboard_file, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or [])
+        for row in reader:
+            if row.get("product_name", "") == str(product_name):
+                for col, val in updates.items():
+                    if col in row:
+                        if col == "approved":
+                            row[col] = "True" if val else "False"
+                        else:
+                            row[col] = str(val)
+            rows.append(row)
+    with open(dashboard_file, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def make_approved_csv_bytes(df: pd.DataFrame) -> bytes:

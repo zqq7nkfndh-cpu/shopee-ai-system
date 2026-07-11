@@ -28,9 +28,9 @@ def build_dashboard() -> list:
     merged = dict(existing_map)
     for row in new_rows:
         key = _row_key(row)
-        if key in existing_map:
-            row["status"] = existing_map[key].get("status", row.get("status", ""))
-            row["approved"] = existing_map[key].get("approved", row.get("approved", False))
+        # shopee_listing_drafts.csv is the source of truth for approved/status.
+        # Always use its values so that approvals made via update_draft_csv are
+        # reflected in the dashboard when it is regenerated.
         merged[key] = row
 
     rows = list(merged.values())
