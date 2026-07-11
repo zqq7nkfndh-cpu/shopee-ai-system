@@ -151,8 +151,20 @@ def update_draft_csv(product_name: str, country: str, updates: dict) -> bool:
     if not mask.any():
         return False
     for col, val in updates.items():
-        if col in df.columns:
-            df.loc[mask, col] = val
+        if col not in df.columns:
+            df[col] = False if col == "approved" else ""
+
+        if col == "approved":
+            df[col] = df[col].map(
+                lambda x: x if isinstance(x, bool) else (
+                    str(x).strip().lower() in ("true", "1", "yes")
+                    if pd.notna(x) else False
+                )
+            ).astype("boolean")
+            df.loc[mask, col] = bool(val)
+        else:
+            df[col] = df[col].astype("string")
+            df.loc[mask, col] = str(val)
     df.to_csv(DRAFTS_FILE, index=False, encoding="utf-8-sig")
     return True
 
@@ -614,7 +626,7 @@ elif page == "📝 出品下書き確認":
                         type="primary",
                     ):
                         ok = update_draft_csv(product_name, country, {
-                            "approved": "TRUE",
+                            "approved": True,
                             "status": "approved",
                         })
                         st.session_state.pop(confirm_key, None)
@@ -642,7 +654,7 @@ elif page == "📝 出品下書き確認":
                         use_container_width=True,
                     ):
                         update_draft_csv(product_name, country, {
-                            "approved": "FALSE",
+                            "approved": False,
                             "status": "draft_pending_human_approval",
                         })
                         st.rerun()
@@ -657,7 +669,7 @@ elif page == "📝 出品下書き確認":
                         use_container_width=True,
                     ):
                         update_draft_csv(product_name, country, {
-                            "approved": "FALSE",
+                            "approved": False,
                             "status": "draft_pending_human_approval",
                         })
                         st.rerun()
@@ -697,7 +709,7 @@ elif page == "📝 出品下書き確認":
                         use_container_width=True,
                     ):
                         update_draft_csv(product_name, country, {
-                            "approved": "FALSE",
+                            "approved": False,
                             "status": "rejected",
                         })
                         st.rerun()

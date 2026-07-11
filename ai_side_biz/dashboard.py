@@ -30,7 +30,7 @@ def build_dashboard() -> list:
         key = _row_key(row)
         if key in existing_map:
             row["status"] = existing_map[key].get("status", row.get("status", ""))
-            row["approved"] = existing_map[key].get("approved", row.get("approved", "FALSE"))
+            row["approved"] = existing_map[key].get("approved", row.get("approved", False))
         merged[key] = row
 
     rows = list(merged.values())

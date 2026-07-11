@@ -209,7 +209,7 @@ def build_candidates(target_margin: float = 0.3) -> list[dict]:
             "selling_points": copy["selling_points"],
             "caution_notes": copy["caution_notes"],
             "status": "draft_pending_human_approval",
-            "approved": "FALSE",
+            "approved": False,
         })
         out_rows.append(row)
 
