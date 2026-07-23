@@ -14,6 +14,7 @@ import pandas as pd
 import streamlit as st
 import shopee_research
 import dashboard
+import shopee_mass_upload as mass_upload
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "outputs"
@@ -23,6 +24,8 @@ SHOPEE_COUNTRIES = ["Singapore", "Malaysia", "Taiwan", "Philippines", "Thailand"
 SHOPEE_INPUT_FILE = DATA_DIR / "shopee_trend_input.csv"
 SHOPEE_TEMPLATE_FILE = DATA_DIR / "shopee_trend_input_template.csv"
 DRAFTS_FILE = OUTPUT_DIR / "shopee_listing_drafts.csv"
+
+MASS_UPLOAD_EXTRA_FILE = DATA_DIR / "mass_upload_extra_data.json"
 
 SHOPEE_INPUT_COLUMNS = [
     "country", "genre", "product_name", "trend_reason",
@@ -243,6 +246,29 @@ def make_approved_csv_bytes(df: pd.DataFrame) -> bytes:
     return buf.getvalue().encode("utf-8-sig")
 
 
+def load_mass_upload_extra() -> dict:
+    """mass_upload_extra_data.json を読み込む。存在しなければ空 dict を返す。"""
+    if MASS_UPLOAD_EXTRA_FILE.exists():
+        try:
+            with open(MASS_UPLOAD_EXTRA_FILE, encoding="utf-8") as f:
+                return _json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_mass_upload_extra(data: dict) -> None:
+    """mass_upload_extra_data.json に保存する。"""
+    MASS_UPLOAD_EXTRA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(MASS_UPLOAD_EXTRA_FILE, "w", encoding="utf-8") as f:
+        _json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _extra_key(country: str, product_name: str) -> str:
+    """extra_data の辞書キーを生成する。"""
+    return f"{country}|{product_name}"
+
+
 # ── サイドバー ────────────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -257,6 +283,7 @@ with st.sidebar:
             "📝 出品下書き確認",
             "💰 利益計算シミュレーター",
             "📤 承認済みエクスポート",
+            "🗂️ Shopee一括アップロード形式",
             "✅ 出品準備チェックリスト",
             "💴 仕入れ・価格トラッカー",
             "🔍 自動リサーチ",
@@ -1908,9 +1935,394 @@ elif page == "🔍 自動リサーチ":
             st.caption("🔒 DRY_RUN=True — Shopeeへの自動出品は無効です。すべての操作はCSVへの記録のみです。")
 
 
+
 # ══════════════════════════════════════════════════════════
-# ℹ️ 使い方
+# 🗂️ Shopee一括アップロード形式エクスポート
 # ══════════════════════════════════════════════════════════
+elif page == "🗂️ Shopee一括アップロード形式":
+    st.title("🗂️ Shopee 一括アップロード形式 CSV エクスポート")
+    st.warning(
+        "⚠️ **このページは内部CSV（「📤 承認済みエクスポート」）とは別のShopee公式フォーマットです。**\n\n"
+        "Shopee Seller Center の「一括アップロード」機能で使えるCSVを生成します。\n"
+        "**カテゴリID・商品画像URL・重量・物流チャンネルは自動入力できません。**\n"
+        "各商品カードから手動で入力してください。出品は行いません。"
+    )
+
+    df_all = load_csv("shopee_listing_drafts.csv")
+    if df_all is None:
+        st.info("まだデータがありません。「📥 商品入力エディタ」でデータを追加して下書きを生成してください。")
+        st.stop()
+
+    # 承認済み・低リスクのみ
+    df_eligible = df_all[
+        (df_all["approved"].astype(str).str.upper() == "TRUE") &
+        (df_all["risk_level"].astype(str).str.lower() != "high")
+    ].copy().reset_index(drop=True)
+
+    if df_eligible.empty:
+        st.info(
+            "一括アップロード対象の商品がありません。\n\n"
+            "👉「📝 出品下書き確認」ページで **承認** された低リスク商品がここに表示されます。"
+        )
+        st.stop()
+
+    # ── 国別フィルター ────────────────────────────────────────
+    available_countries = sorted(df_eligible["country"].dropna().unique().tolist())
+    if not available_countries:
+        st.warning("承認済み商品に対象国が設定されていません。")
+        st.stop()
+
+    selected_country = st.selectbox(
+        "🌍 出品先の国を選択",
+        options=available_countries,
+        help="国ごとに別々のCSVを生成します。Shopeeの各国 Seller Center にアップロードしてください。",
+    )
+    currency = mass_upload.COUNTRY_CURRENCY.get(selected_country, "USD")
+    st.caption(
+        f"通貨: **{currency}**　｜　"
+        f"参考為替レート: 1 {currency} ≈ ¥{mass_upload.APPROX_JPY_PER_LOCAL.get(currency, 0):.1f}"
+        "（概算。最新レートで必ず確認してください）"
+    )
+
+    df_country = df_eligible[
+        df_eligible["country"].astype(str) == selected_country
+    ].copy().reset_index(drop=True)
+
+    if df_country.empty:
+        st.info(f"{selected_country} に承認済みの低リスク商品がありません。")
+        st.stop()
+
+    st.divider()
+
+    # ── extra データロード ────────────────────────────────────
+    if "mu_extra_data" not in st.session_state:
+        st.session_state["mu_extra_data"] = load_mass_upload_extra()
+    extra_data: dict = st.session_state["mu_extra_data"]
+
+    # ── 商品カード（1件ずつ入力フォーム） ────────────────────
+    st.subheader(f"📋 {selected_country} の商品一覧（{len(df_country)} 件）")
+    st.caption(
+        "各商品カードを開いて必須フィールドを入力してください。\n"
+        "すべての必須項目が入力された商品のみCSVに含まれます。"
+    )
+
+    # 全商品の検証結果をまとめて保持
+    valid_rows: list[dict] = []
+    all_errors: dict[str, list[str]] = {}
+
+    for idx, draft_row in df_country.iterrows():
+        product_name = str(draft_row.get("product_name", f"商品 {idx+1}"))
+        e_key = _extra_key(selected_country, product_name)
+        saved_extra = extra_data.get(e_key, {})
+        extra = mass_upload.MassUploadExtra.from_dict(saved_extra)
+
+        # 参考現地通貨価格を計算（まだ入力がない場合のデフォルト値として）
+        price_jpy = float(draft_row.get("selling_price_jpy") or 0)
+        suggested_price = mass_upload.suggest_local_price(price_jpy, selected_country)
+        if extra.price_local <= 0 and suggested_price > 0:
+            extra.price_local = suggested_price
+
+        # バリデーション（入力前の初期状態でも実行）
+        result = mass_upload.validate_product(draft_row, extra)
+        all_errors[product_name] = result.errors
+
+        # カードヘッダー：バリデーション状態を表示
+        status_icon = "✅" if result.is_valid else f"⚠️ ({len(result.errors)}件の未入力)"
+        category_hint = str(draft_row.get("category_suggestion", ""))
+        source_url = str(draft_row.get("source_url", ""))
+
+        with st.expander(
+            f"{status_icon} {product_name}",
+            expanded=(not result.is_valid),
+        ):
+            # 既存情報の参照表示
+            ref_col1, ref_col2 = st.columns(2)
+            with ref_col1:
+                st.markdown(f"**カテゴリ候補（参考）:** {category_hint}")
+                st.caption("※ 参考のみ。正式なカテゴリIDは下の入力欄に別途入力してください。")
+            with ref_col2:
+                st.markdown(f"**推奨販売価格:** ¥{int(price_jpy):,}")
+                st.caption(
+                    f"現地通貨換算参考値: {currency} {suggested_price:.2f}"
+                    "（概算。最新レートで確認すること）"
+                )
+            if source_url and source_url not in ("nan", ""):
+                st.markdown(f"[🔗 仕入れ先URL（参照用）]({source_url})")
+
+            st.markdown("---")
+
+            # ── 必須フィールド入力 ──────────────────────────────
+            st.markdown("#### 🔴 必須フィールド（未入力の場合エクスポート不可）")
+
+            f_col1, f_col2 = st.columns(2)
+            with f_col1:
+                new_category_id = st.text_input(
+                    "Shopee カテゴリID ＊",
+                    value=extra.category_id,
+                    key=f"mu_cat_{idx}",
+                    placeholder="例: 11042（Shopee Seller Center で確認）",
+                    help=(
+                        "Shopee Seller Center の「カテゴリ管理」または "
+                        "Shopee Open Platform API で確認してください。"
+                    ),
+                )
+            with f_col2:
+                new_price_local = st.number_input(
+                    f"販売価格（{currency}）＊",
+                    min_value=0.0,
+                    value=float(extra.price_local),
+                    step=0.5 if currency in ("SGD", "MYR") else 1.0,
+                    format="%.2f" if currency in ("SGD", "MYR") else "%.0f",
+                    key=f"mu_price_{idx}",
+                    help=f"参考換算値: {currency} {suggested_price:.2f}（概算・要確認）",
+                )
+
+            new_main_image = st.text_input(
+                "メイン商品画像 URL ＊",
+                value=extra.main_image_url,
+                key=f"mu_img1_{idx}",
+                placeholder="https://（商品画像をアップロードしたURLを入力）",
+                help="Shopee Mass Upload には最低1枚の商品画像URLが必須です。",
+            )
+
+            w_col, lc_col = st.columns(2)
+            with w_col:
+                new_weight = st.number_input(
+                    "重量 kg ＊",
+                    min_value=0.0,
+                    value=float(extra.weight_kg),
+                    step=0.05,
+                    format="%.3f",
+                    key=f"mu_weight_{idx}",
+                    help="梱包後の総重量（商品＋梱包材）をkg単位で入力",
+                )
+            with lc_col:
+                new_stock = st.number_input(
+                    "在庫数 ＊",
+                    min_value=0,
+                    value=int(extra.stock_qty),
+                    step=1,
+                    key=f"mu_stock_{idx}",
+                    help="Shopeeに登録する在庫数（実在庫を確認してから入力）",
+                )
+
+            new_logistic = st.text_input(
+                "物流チャンネル ＊",
+                value=extra.logistic_channel,
+                key=f"mu_logistic_{idx}",
+                placeholder="例: Standard Express / Shopee Express / J&T Express",
+                help=(
+                    "Shopee Seller Center で有効化した配送チャンネル名をそのまま入力してください。"
+                ),
+            )
+
+            st.markdown("#### 🔵 任意フィールド（入力推奨）")
+
+            img_col2, img_col3 = st.columns(2)
+            with img_col2:
+                new_img2 = st.text_input(
+                    "追加画像 URL 2",
+                    value=extra.image_url_2,
+                    key=f"mu_img2_{idx}",
+                    placeholder="https://（任意）",
+                )
+            with img_col3:
+                new_img3 = st.text_input(
+                    "追加画像 URL 3",
+                    value=extra.image_url_3,
+                    key=f"mu_img3_{idx}",
+                    placeholder="https://（任意）",
+                )
+            img_col4, img_col5 = st.columns(2)
+            with img_col4:
+                new_img4 = st.text_input(
+                    "追加画像 URL 4",
+                    value=extra.image_url_4,
+                    key=f"mu_img4_{idx}",
+                    placeholder="https://（任意）",
+                )
+            with img_col5:
+                new_img5 = st.text_input(
+                    "追加画像 URL 5",
+                    value=extra.image_url_5,
+                    key=f"mu_img5_{idx}",
+                    placeholder="https://（任意）",
+                )
+
+            dim_col1, dim_col2, dim_col3 = st.columns(3)
+            with dim_col1:
+                new_length = st.number_input(
+                    "長さ cm",
+                    min_value=0.0, value=float(extra.length_cm),
+                    step=1.0, key=f"mu_len_{idx}",
+                )
+            with dim_col2:
+                new_width = st.number_input(
+                    "幅 cm",
+                    min_value=0.0, value=float(extra.width_cm),
+                    step=1.0, key=f"mu_wid_{idx}",
+                )
+            with dim_col3:
+                new_height = st.number_input(
+                    "高さ cm",
+                    min_value=0.0, value=float(extra.height_cm),
+                    step=1.0, key=f"mu_hei_{idx}",
+                )
+
+            other_col1, other_col2, other_col3 = st.columns(3)
+            with other_col1:
+                new_preorder = st.number_input(
+                    "予約注文日数",
+                    min_value=0, max_value=30, value=int(extra.preorder_days),
+                    step=1, key=f"mu_pre_{idx}",
+                    help="0 の場合は通常販売（予約注文なし）",
+                )
+            with other_col2:
+                new_condition = st.selectbox(
+                    "商品状態",
+                    options=["New", "Used"],
+                    index=0 if (extra.condition or "New") == "New" else 1,
+                    key=f"mu_cond_{idx}",
+                )
+            with other_col3:
+                new_brand = st.text_input(
+                    "ブランド",
+                    value=extra.brand,
+                    key=f"mu_brand_{idx}",
+                    placeholder="任意",
+                )
+
+            # ── 保存ボタン ──────────────────────────────────────
+            save_col, _ = st.columns([1, 2])
+            with save_col:
+                if st.button("💾 この商品の入力を保存", key=f"mu_save_{idx}", width="stretch"):
+                    new_extra = mass_upload.MassUploadExtra(
+                        category_id=new_category_id.strip(),
+                        price_local=float(new_price_local),
+                        stock_qty=int(new_stock),
+                        main_image_url=new_main_image.strip(),
+                        image_url_2=new_img2.strip(),
+                        image_url_3=new_img3.strip(),
+                        image_url_4=new_img4.strip(),
+                        image_url_5=new_img5.strip(),
+                        weight_kg=float(new_weight),
+                        length_cm=float(new_length),
+                        width_cm=float(new_width),
+                        height_cm=float(new_height),
+                        logistic_channel=new_logistic.strip(),
+                        preorder_days=int(new_preorder),
+                        condition=new_condition,
+                        brand=new_brand.strip(),
+                    )
+                    extra_data[e_key] = new_extra.to_dict()
+                    st.session_state["mu_extra_data"] = extra_data
+                    save_mass_upload_extra(extra_data)
+                    st.success("✅ 保存しました。")
+                    st.rerun()
+
+            # ── バリデーションエラー表示 ────────────────────────
+            # 最新の入力値で再検証
+            current_extra = mass_upload.MassUploadExtra(
+                category_id=new_category_id.strip(),
+                price_local=float(new_price_local),
+                stock_qty=int(new_stock),
+                main_image_url=new_main_image.strip(),
+                weight_kg=float(new_weight),
+                logistic_channel=new_logistic.strip(),
+                image_url_2=new_img2.strip(),
+                image_url_3=new_img3.strip(),
+                image_url_4=new_img4.strip(),
+                image_url_5=new_img5.strip(),
+                length_cm=float(new_length),
+                width_cm=float(new_width),
+                height_cm=float(new_height),
+                preorder_days=int(new_preorder),
+                condition=new_condition,
+                brand=new_brand.strip(),
+            )
+            current_result = mass_upload.validate_product(draft_row, current_extra)
+            all_errors[product_name] = current_result.errors
+
+            if current_result.is_valid:
+                st.success("✅ この商品はエクスポート可能です。")
+                export_row = mass_upload.build_mass_upload_row(draft_row, current_extra)
+                valid_rows.append(export_row)
+            else:
+                st.error(
+                    f"🔴 **{len(current_result.errors)} 件の必須フィールドが未入力です**\n\n"
+                    + "\n".join(f"- {e.splitlines()[0]}" for e in current_result.errors)
+                )
+
+        st.write("")
+
+    # ── エクスポートサマリーと DL ボタン ─────────────────────
+    st.divider()
+
+    n_valid = len(valid_rows)
+    n_total = len(df_country)
+    n_invalid = n_total - n_valid
+
+    summary_c1, summary_c2, summary_c3 = st.columns(3)
+    summary_c1.metric("対象商品（承認済み）", n_total)
+    summary_c2.metric("✅ エクスポート可能", n_valid)
+    summary_c3.metric("⚠️ 未入力あり（除外）", n_invalid)
+
+    if n_invalid > 0:
+        with st.expander("⚠️ エクスポートから除外される商品と理由"):
+            for pname, errs in all_errors.items():
+                if errs:
+                    st.markdown(f"**🔴 {pname}**")
+                    for e in errs:
+                        st.caption(f"  - {e.splitlines()[0]}")
+
+    st.divider()
+    st.subheader("⬇️ Shopee Mass Upload CSV ダウンロード")
+    st.caption(
+        "このCSVは Shopee Seller Center の「商品管理 → 一括アップロード」で使用できます。\n"
+        "ダウンロード後、必ず内容を確認してから Shopee にアップロードしてください。\n"
+        "このファイルをアップロードしても自動出品は行われません（Shopee側の確認が必要です）。"
+    )
+
+    # 内部CSV（既存機能）との差別化注記
+    with st.expander("ℹ️ 内部CSVとの違い"):
+        st.markdown("""
+| 項目 | 内部CSV（承認済みエクスポート）| Shopee Mass Upload CSV（このページ）|
+|---|---|---|
+| 用途 | 社内管理・記録用 | Shopee Seller Center への直接アップロード用 |
+| 列構成 | システム内部フォーマット | Shopee公式テンプレート形式 |
+| 商品画像 | なし（参照なし）| 必須（URL入力が必要）|
+| カテゴリ | テキスト候補（参考）| Shopee公式カテゴリID（数値）が必要 |
+| 価格 | 円建て（JPY）| 現地通貨（国ごとに異なる）|
+| 重量・寸法 | なし | 必須（入力が必要）|
+| 物流チャンネル | なし | 必須（入力が必要）|
+        """)
+
+    if n_valid == 0:
+        st.info(
+            "エクスポート可能な商品がありません。\n\n"
+            "各商品カードを開いて、必須フィールドをすべて入力して「💾 保存」してください。"
+        )
+    else:
+        csv_bytes = mass_upload.generate_mass_upload_csv(valid_rows)
+        st.download_button(
+            label=f"📥 {selected_country} 向け Shopee Mass Upload CSV をダウンロード（{n_valid}件）",
+            data=csv_bytes,
+            file_name=(
+                f"shopee_mass_upload_{selected_country.lower()}_"
+                f"{_dt.date.today().isoformat()}.csv"
+            ),
+            mime="text/csv",
+            width="stretch",
+            type="primary",
+        )
+        st.caption(
+            f"⚠️ {n_invalid} 件は必須フィールド未入力のため除外されています。"
+            if n_invalid > 0 else
+            f"✅ 全 {n_valid} 件が含まれます。"
+        )
+
+
+
 elif page == "ℹ️ 使い方":
     st.title("ℹ️ 使い方ガイド")
 
