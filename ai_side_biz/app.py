@@ -233,7 +233,7 @@ def make_approved_csv_bytes(df: pd.DataFrame) -> bytes:
     """承認済み・非高リスクの行だけ CSV バイト列で返す"""
     safe_df = normalize_for_streamlit(df)
     approved = safe_df[
-        (safe_df["approved"] == True) &
+        safe_df["approved"] &
         (safe_df["risk_level"].astype(str).str.lower() != "high")
     ]
     buf = io.StringIO()
