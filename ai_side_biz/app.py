@@ -115,6 +115,7 @@ def _normalize_approved_column(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _normalize_object_value(value):
+    """Convert object-like/nullable cell values into Streamlit/PyArrow-safe scalars."""
     if isinstance(value, (list, tuple, set, dict)):
         return _json.dumps(value, ensure_ascii=False, default=str)
     if isinstance(value, (bytes, bytearray, memoryview)):
@@ -128,6 +129,7 @@ def _normalize_object_value(value):
 
 
 def normalize_for_streamlit(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize bool/object columns before Streamlit render/export to avoid Arrow crashes."""
     safe_df = _normalize_approved_column(df.copy())
 
     for col in safe_df.columns:
