@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 import shopee_research
 import dashboard
-import shopee_mass_upload as _smu
+import shopee_mass_upload as mass_upload
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "outputs"
@@ -249,10 +249,9 @@ def make_approved_csv_bytes(df: pd.DataFrame) -> bytes:
 def load_mass_upload_extra() -> dict:
     """mass_upload_extra_data.json を読み込む。存在しなければ空 dict を返す。"""
     if MASS_UPLOAD_EXTRA_FILE.exists():
-        import json as _je
         try:
             with open(MASS_UPLOAD_EXTRA_FILE, encoding="utf-8") as f:
-                return _je.load(f)
+                return _json.load(f)
         except Exception:
             pass
     return {}
@@ -260,10 +259,9 @@ def load_mass_upload_extra() -> dict:
 
 def save_mass_upload_extra(data: dict) -> None:
     """mass_upload_extra_data.json に保存する。"""
-    import json as _js
     MASS_UPLOAD_EXTRA_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(MASS_UPLOAD_EXTRA_FILE, "w", encoding="utf-8") as f:
-        _js.dump(data, f, ensure_ascii=False, indent=2)
+        _json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def _extra_key(country: str, product_name: str) -> str:
@@ -1942,8 +1940,6 @@ elif page == "🔍 自動リサーチ":
 # 🗂️ Shopee一括アップロード形式エクスポート
 # ══════════════════════════════════════════════════════════
 elif page == "🗂️ Shopee一括アップロード形式":
-    import json as _mu_json
-
     st.title("🗂️ Shopee 一括アップロード形式 CSV エクスポート")
     st.warning(
         "⚠️ **このページは内部CSV（「📤 承認済みエクスポート」）とは別のShopee公式フォーマットです。**\n\n"
@@ -1981,10 +1977,10 @@ elif page == "🗂️ Shopee一括アップロード形式":
         options=available_countries,
         help="国ごとに別々のCSVを生成します。Shopeeの各国 Seller Center にアップロードしてください。",
     )
-    currency = _smu.COUNTRY_CURRENCY.get(selected_country, "USD")
+    currency = mass_upload.COUNTRY_CURRENCY.get(selected_country, "USD")
     st.caption(
         f"通貨: **{currency}**　｜　"
-        f"参考為替レート: 1 {currency} ≈ ¥{_smu.APPROX_JPY_PER_LOCAL.get(currency, 0):.1f}"
+        f"参考為替レート: 1 {currency} ≈ ¥{mass_upload.APPROX_JPY_PER_LOCAL.get(currency, 0):.1f}"
         "（概算。最新レートで必ず確認してください）"
     )
 
@@ -2018,16 +2014,16 @@ elif page == "🗂️ Shopee一括アップロード形式":
         product_name = str(draft_row.get("product_name", f"商品 {idx+1}"))
         e_key = _extra_key(selected_country, product_name)
         saved_extra = extra_data.get(e_key, {})
-        extra = _smu.MassUploadExtra.from_dict(saved_extra)
+        extra = mass_upload.MassUploadExtra.from_dict(saved_extra)
 
         # 参考現地通貨価格を計算（まだ入力がない場合のデフォルト値として）
         price_jpy = float(draft_row.get("selling_price_jpy") or 0)
-        suggested_price = _smu.suggest_local_price(price_jpy, selected_country)
+        suggested_price = mass_upload.suggest_local_price(price_jpy, selected_country)
         if extra.price_local <= 0 and suggested_price > 0:
             extra.price_local = suggested_price
 
         # バリデーション（入力前の初期状態でも実行）
-        result = _smu.validate_product(draft_row, extra)
+        result = mass_upload.validate_product(draft_row, extra)
         all_errors[product_name] = result.errors
 
         # カードヘッダー：バリデーション状態を表示
@@ -2200,7 +2196,7 @@ elif page == "🗂️ Shopee一括アップロード形式":
             save_col, _ = st.columns([1, 2])
             with save_col:
                 if st.button("💾 この商品の入力を保存", key=f"mu_save_{idx}", width="stretch"):
-                    new_extra = _smu.MassUploadExtra(
+                    new_extra = mass_upload.MassUploadExtra(
                         category_id=new_category_id.strip(),
                         price_local=float(new_price_local),
                         stock_qty=int(new_stock),
@@ -2226,7 +2222,7 @@ elif page == "🗂️ Shopee一括アップロード形式":
 
             # ── バリデーションエラー表示 ────────────────────────
             # 最新の入力値で再検証
-            current_extra = _smu.MassUploadExtra(
+            current_extra = mass_upload.MassUploadExtra(
                 category_id=new_category_id.strip(),
                 price_local=float(new_price_local),
                 stock_qty=int(new_stock),
@@ -2244,12 +2240,12 @@ elif page == "🗂️ Shopee一括アップロード形式":
                 condition=new_condition,
                 brand=new_brand.strip(),
             )
-            current_result = _smu.validate_product(draft_row, current_extra)
+            current_result = mass_upload.validate_product(draft_row, current_extra)
             all_errors[product_name] = current_result.errors
 
             if current_result.is_valid:
                 st.success("✅ この商品はエクスポート可能です。")
-                export_row = _smu.build_mass_upload_row(draft_row, current_extra)
+                export_row = mass_upload.build_mass_upload_row(draft_row, current_extra)
                 valid_rows.append(export_row)
             else:
                 st.error(
@@ -2307,7 +2303,7 @@ elif page == "🗂️ Shopee一括アップロード形式":
             "各商品カードを開いて、必須フィールドをすべて入力して「💾 保存」してください。"
         )
     else:
-        csv_bytes = _smu.generate_mass_upload_csv(valid_rows)
+        csv_bytes = mass_upload.generate_mass_upload_csv(valid_rows)
         st.download_button(
             label=f"📥 {selected_country} 向け Shopee Mass Upload CSV をダウンロード（{n_valid}件）",
             data=csv_bytes,
