@@ -66,7 +66,8 @@ def load_csv(filename: str) -> pd.DataFrame | None:
     path = OUTPUT_DIR / filename
     if not path.exists():
         return None
-    return pd.read_csv(path, encoding="utf-8-sig")
+    df = pd.read_csv(path, encoding="utf-8-sig")
+    return normalize_for_streamlit(df)
 
 
 def load_md(filename: str) -> str | None:
@@ -102,6 +103,43 @@ def risk_badge(level: str) -> str:
     )
 
 
+def _normalize_approved_column(df: pd.DataFrame) -> pd.DataFrame:
+    if "approved" in df.columns:
+        df["approved"] = (
+            df["approved"]
+            .fillna(False)
+            .map(lambda x: str(x).strip().lower() in ("true", "1", "yes"))
+            .astype(bool)
+        )
+    return df
+
+
+def _normalize_object_value(value):
+    if isinstance(value, (list, tuple, set, dict)):
+        return _json.dumps(value, ensure_ascii=False, default=str)
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        try:
+            return bytes(value).decode("utf-8")
+        except Exception:
+            return str(value)
+    if pd.isna(value):
+        return ""
+    return value
+
+
+def normalize_for_streamlit(df: pd.DataFrame) -> pd.DataFrame:
+    safe_df = _normalize_approved_column(df.copy())
+
+    for col in safe_df.columns:
+        series = safe_df[col]
+        if str(series.dtype) == "boolean":
+            safe_df[col] = series.fillna(False).astype(bool)
+        elif pd.api.types.is_object_dtype(series):
+            safe_df[col] = series.map(_normalize_object_value)
+
+    return safe_df
+
+
 def last_modified(filename: str) -> str:
     path = OUTPUT_DIR / filename
     if not path.exists():
@@ -115,7 +153,7 @@ def regen_button(label: str, command: str, filename: str) -> None:
     with col1:
         st.caption(f"最終更新: {last_modified(filename)}")
     with col2:
-        if st.button(label, use_container_width=True, type="primary"):
+        if st.button(label, width="stretch", type="primary"):
             with st.spinner("生成中..."):
                 ok, out = run_task(command)
             if ok:
@@ -155,14 +193,7 @@ def update_draft_csv(product_name: str, country: str, updates: dict) -> bool:
         if col not in df.columns:
             df[col] = False if col == "approved" else ""
         if col == "approved":
-            # Normalize the entire column to plain bool (non-nullable) to avoid
-            # pandas 3.x CoW / nullable-BooleanDtype conflicts with df.loc assignment.
-            df[col] = df[col].map(
-                lambda x: bool(x) if isinstance(x, bool) else (
-                    str(x).strip().lower() in ("true", "1", "yes")
-                    if pd.notna(x) else False
-                )
-            ).astype(bool)
+            df = _normalize_approved_column(df)
             df.loc[mask, col] = bool(val)
         else:
             # Direct string assignment — no dtype coercion needed.
@@ -200,9 +231,10 @@ def _sync_dashboard_csv(product_name: str, updates: dict) -> None:
 
 def make_approved_csv_bytes(df: pd.DataFrame) -> bytes:
     """承認済み・非高リスクの行だけ CSV バイト列で返す"""
-    approved = df[
-        (df["approved"].astype(str).str.upper() == "TRUE") &
-        (df["risk_level"].astype(str).str.lower() != "high")
+    safe_df = normalize_for_streamlit(df)
+    approved = safe_df[
+        (safe_df["approved"] == True) &
+        (safe_df["risk_level"].astype(str).str.lower() != "high")
     ]
     buf = io.StringIO()
     approved.to_csv(buf, index=False, encoding="utf-8-sig")
@@ -273,14 +305,14 @@ if page == "🏠 ダッシュボード":
             risk_counts["リスク"] = risk_counts["リスク"].map(
                 {"low": "🟢 低", "medium": "🟡 中", "high": "🔴 高"}
             ).fillna(risk_counts["リスク"])
-            st.dataframe(risk_counts, use_container_width=True, hide_index=True)
+            st.dataframe(normalize_for_streamlit(risk_counts), width="stretch", hide_index=True)
 
     with col_r:
         st.subheader("🌍 国別内訳")
         if "country" in df.columns:
             country_counts = df["country"].value_counts().reset_index()
             country_counts.columns = ["国", "件数"]
-            st.dataframe(country_counts, use_container_width=True, hide_index=True)
+            st.dataframe(normalize_for_streamlit(country_counts), width="stretch", hide_index=True)
 
     st.divider()
     st.subheader("📋 全商品一覧")
@@ -304,7 +336,7 @@ if page == "🏠 ダッシュボード":
             {"low": "🟢 低", "medium": "🟡 中", "high": "🔴 高"}
         ).fillna(display_df["risk_level"])
 
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(normalize_for_streamlit(display_df), width="stretch", hide_index=True)
 
 
 # ══════════════════════════════════════════════════════════
@@ -345,7 +377,7 @@ elif page == "📥 商品入力エディタ":
                 help="0の場合は自動計算（目標利益率30%ベース）",
             )
 
-        submitted = st.form_submit_button("＋ リストに追加する", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("＋ リストに追加する", width="stretch", type="primary")
 
     if submitted:
         if not new_genre.strip() or not new_product.strip() or not new_trend.strip():
@@ -379,7 +411,7 @@ elif page == "📥 商品入力エディタ":
     else:
         edited_df = st.data_editor(
             current_df,
-            use_container_width=True,
+            width="stretch",
             num_rows="dynamic",
             column_config={
                 "country": st.column_config.SelectboxColumn("対象国", options=SHOPEE_COUNTRIES, required=True),
@@ -402,7 +434,7 @@ elif page == "📥 商品入力エディタ":
     st.write("")
     btn_c1, btn_c2 = st.columns(2)
     with btn_c1:
-        if st.button("💾 変更を保存", use_container_width=True, type="primary"):
+        if st.button("💾 変更を保存", width="stretch", type="primary"):
             if edited_df is not None and not edited_df.empty:
                 clean = edited_df.dropna(subset=["product_name"]).reset_index(drop=True)
                 save_shopee_input(clean)
@@ -411,7 +443,7 @@ elif page == "📥 商品入力エディタ":
                 save_shopee_input(pd.DataFrame(columns=SHOPEE_INPUT_COLUMNS))
                 st.success("✅ データをクリアしました。")
     with btn_c2:
-        if st.button("🔄 出品下書きを再生成", use_container_width=True):
+        if st.button("🔄 出品下書きを再生成", width="stretch"):
             with st.spinner("生成中..."):
                 ok, out = run_task("shopee")
             if ok:
@@ -453,7 +485,7 @@ elif page == "📝 出品下書き確認":
                     data=csv_bytes,
                     file_name=f"shopee_approved_{_dt.date.today().isoformat()}.csv",
                     mime="text/csv",
-                    use_container_width=True,
+                    width="stretch",
                     type="primary",
                 )
             else:
@@ -651,7 +683,7 @@ elif page == "📝 出品下書き確認":
                     if st.button(
                         "✅ 承認を確定する",
                         key=f"confirm_yes_{item_key}",
-                        use_container_width=True,
+                        width="stretch",
                         type="primary",
                     ):
                         ok = update_draft_csv(product_name, country, {
@@ -668,7 +700,7 @@ elif page == "📝 出品下書き確認":
                     if st.button(
                         "キャンセル",
                         key=f"confirm_no_{item_key}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         st.session_state.pop(confirm_key, None)
                         st.rerun()
@@ -680,7 +712,7 @@ elif page == "📝 出品下書き確認":
                     if st.button(
                         "↩️ 承認を取り消す",
                         key=f"undo_{item_key}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         update_draft_csv(product_name, country, {
                             "approved": False,
@@ -695,7 +727,7 @@ elif page == "📝 出品下書き確認":
                     if st.button(
                         "↩️ 却下を取り消す",
                         key=f"restore_{item_key}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         update_draft_csv(product_name, country, {
                             "approved": False,
@@ -724,7 +756,7 @@ elif page == "📝 出品下書き確認":
                     if st.button(
                         "✅ 承認する" if risk != "high" else "⚠️ 強制承認する",
                         key=f"approve_{item_key}",
-                        use_container_width=True,
+                        width="stretch",
                         type="primary",
                         disabled=not can_approve,
                     ):
@@ -735,7 +767,7 @@ elif page == "📝 出品下書き確認":
                     if st.button(
                         "❌ 却下する",
                         key=f"reject_{item_key}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         update_draft_csv(product_name, country, {
                             "approved": False,
@@ -831,7 +863,7 @@ elif page == "💰 利益計算シミュレーター":
                 "利益率": f"{(pr/p*100):.0f}%" if p > 0 else "-",
                 "判定": "✅ 黒字" if pr > 0 else "🔴 赤字",
             })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(normalize_for_streamlit(pd.DataFrame(rows)), width="stretch", hide_index=True)
 
 
 # ══════════════════════════════════════════════════════════
@@ -887,7 +919,7 @@ elif page == "📤 承認済みエクスポート":
             "selling_price_jpy", "selling_price_usd",
             "profit_jpy", "profit_margin", "risk_level",
         ] if c in approved_df.columns]
-        st.dataframe(approved_df[display_cols], use_container_width=True, hide_index=True)
+        st.dataframe(normalize_for_streamlit(approved_df[display_cols]), width="stretch", hide_index=True)
 
         # ── ① CSV ダウンロード（メインアクション）────────────────
         st.divider()
@@ -901,13 +933,13 @@ elif page == "📤 承認済みエクスポート":
 
         with dl_col1:
             csv_buffer = io.StringIO()
-            approved_df.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
+            normalize_for_streamlit(approved_df).to_csv(csv_buffer, index=False, encoding="utf-8-sig")
             st.download_button(
                 label="📄 承認済みCSVをダウンロード",
                 data=csv_buffer.getvalue().encode("utf-8-sig"),
                 file_name=f"shopee_approved_{_dt.date.today().isoformat()}.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
                 type="primary",
             )
             st.caption("Shopee Seller Center での手動出品に使用してください")
@@ -936,7 +968,7 @@ elif page == "📤 承認済みエクスポート":
                 data=json_str.encode("utf-8"),
                 file_name=f"shopee_api_draft_{_dt.date.today().isoformat()}.json",
                 mime="application/json",
-                use_container_width=True,
+                width="stretch",
             )
             st.caption("将来の Shopee Open Platform API 連携用（確認・編集してから使用）")
 
@@ -956,7 +988,7 @@ elif page == "📤 承認済みエクスポート":
             st.button(
                 "🚀 承認済み商品をShopeeへ出品する（現在無効）",
                 disabled=True,
-                use_container_width=True,
+                width="stretch",
                 help="shopee_api.py の DRY_RUN を False に変更すると有効になります",
             )
             st.caption(
@@ -983,7 +1015,7 @@ elif page == "📤 承認済みエクスポート":
                     if st.button(
                         f"✅ {exportable}件 を今すぐ出品する",
                         key="publish_yes",
-                        use_container_width=True,
+                        width="stretch",
                         type="primary",
                     ):
                         from shopee_api import create_item as _create_item
@@ -1006,14 +1038,14 @@ elif page == "📤 承認済みエクスポート":
                     if st.button(
                         "キャンセル",
                         key="publish_no",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         st.session_state.pop(publish_confirm_key, None)
                         st.rerun()
             else:
                 if st.button(
                     f"🚀 承認済み {exportable}件 を Shopee へ出品する",
-                    use_container_width=True,
+                    width="stretch",
                     type="primary",
                 ):
                     st.session_state[publish_confirm_key] = True
@@ -1024,7 +1056,7 @@ elif page == "📤 承認済みエクスポート":
         with st.expander(f"🔴 除外された高リスク商品 ({excluded}件)"):
             st.error("以下の商品は approved=TRUE ですが、高リスクのためエクスポートから除外しました。")
             excl_cols = [c for c in ["product_name", "risk_level", "risk_reason"] if c in rejected_df.columns]
-            st.dataframe(rejected_df[excl_cols], use_container_width=True, hide_index=True)
+            st.dataframe(normalize_for_streamlit(rejected_df[excl_cols]), width="stretch", hide_index=True)
 
 
 # ══════════════════════════════════════════════════════════
@@ -1241,7 +1273,7 @@ elif page == "✅ 出品準備チェックリスト":
     # リセットボタン
     reset_col, _ = st.columns([1, 3])
     with reset_col:
-        if st.button("🔄 チェックをリセット", use_container_width=True):
+        if st.button("🔄 チェックをリセット", width="stretch"):
             blank = {item["key"]: False for item in CHECKLIST_ITEMS}
             save_checklist(blank)
             st.rerun()
@@ -1365,9 +1397,9 @@ elif page == "💴 仕入れ・価格トラッカー":
     )
 
     top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
-    save_clicked = top_col1.button("💾 すべて保存", type="primary", use_container_width=True)
-    recalc_clicked = top_col2.button("🔄 利益を再計算してから保存", use_container_width=True)
-    reload_clicked = top_col3.button("↩️ 再読み込み", use_container_width=True)
+    save_clicked = top_col1.button("💾 すべて保存", type="primary", width="stretch")
+    recalc_clicked = top_col2.button("🔄 利益を再計算してから保存", width="stretch")
+    reload_clicked = top_col3.button("↩️ 再読み込み", width="stretch")
 
     if reload_clicked:
         st.session_state.pop("tracker_df", None)
@@ -1584,8 +1616,8 @@ elif page == "💴 仕入れ・価格トラッカー":
 
     st.divider()
     bot_col1, bot_col2, _ = st.columns([2, 2, 1])
-    save2 = bot_col1.button("💾 すべて保存（下部）", type="primary", use_container_width=True)
-    recalc2 = bot_col2.button("🔄 再計算して保存（下部）", use_container_width=True)
+    save2 = bot_col1.button("💾 すべて保存（下部）", type="primary", width="stretch")
+    recalc2 = bot_col2.button("🔄 再計算して保存（下部）", width="stretch")
 
     if save2 or recalc2:
         rows_out = []
@@ -1684,10 +1716,10 @@ elif page == "🔍 自動リサーチ":
         run_research = st.button(
             "🔍 新しい商品アイデアを探す",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
     with clear_col:
-        clear_btn = st.button("🗑️ 結果をクリア", use_container_width=True)
+        clear_btn = st.button("🗑️ 結果をクリア", width="stretch")
 
     if clear_btn:
         st.session_state.pop("research_results", None)
@@ -1730,13 +1762,13 @@ elif page == "🔍 自動リサーチ":
     # 全選択/全解除
     sel_all_col, desel_all_col, _ = st.columns([1, 1, 3])
     with sel_all_col:
-        if st.button("☑️ 全選択", use_container_width=True):
+        if st.button("☑️ 全選択", width="stretch"):
             for i, r in enumerate(results):
                 selected_map[i] = True
             st.session_state["research_selected"] = selected_map
             st.rerun()
     with desel_all_col:
-        if st.button("□ 全解除", use_container_width=True):
+        if st.button("□ 全解除", width="stretch"):
             st.session_state["research_selected"] = {}
             st.rerun()
 
@@ -1838,7 +1870,7 @@ elif page == "🔍 自動リサーチ":
             if st.button(
                 f"📝 選択した {n_selected} 件の下書きを生成する",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
             ):
                 with st.spinner("出品下書きを生成中..."):
                     drafts = _ar.generate_drafts_from_research(
@@ -1867,7 +1899,7 @@ elif page == "🔍 自動リサーチ":
         st.button(
             "🚀 承認済み商品をShopeeへ出品する（DRY_RUN=True のため無効）",
             disabled=True,
-            use_container_width=True,
+            width="stretch",
             help="shopee_api.py の DRY_RUN=False に変更すると有効になります。現在は出品しません。",
         )
         if _RES_DRY_RUN:
