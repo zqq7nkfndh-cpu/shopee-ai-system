@@ -112,6 +112,7 @@ def create_app(config=None):
                 "Referrer-Policy": "no-referrer",
                 "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
                 "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Robots-Tag": "noindex, nofollow, noarchive",
             }
         )
         if request.path.startswith("/api/"):
@@ -154,6 +155,10 @@ def create_app(config=None):
     @app.get("/")
     def index():
         return send_from_directory(STATIC, "index.html")
+
+    @app.get("/robots.txt")
+    def robots():
+        return Response("User-agent: *\nDisallow: /\n", mimetype="text/plain")
 
     @app.get("/api/health")
     def health():

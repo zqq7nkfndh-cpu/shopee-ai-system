@@ -157,6 +157,11 @@ class AppTests(unittest.TestCase):
         self.assertIn("Research Desk", res.text)
         self.assertIn("script-src 'self'", res.headers["Content-Security-Policy"])
         self.assertEqual(res.headers["X-Frame-Options"], "DENY")
+        self.assertEqual(res.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
+        self.assertIn('name="robots"', res.text)
+        self.assertEqual(
+            self.client.get("/robots.txt").text, "User-agent: *\nDisallow: /\n"
+        )
         for url in ["/assets/app.js", "/assets/styles.css", "/assets/mark.svg"]:
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
@@ -165,6 +170,67 @@ class AppTests(unittest.TestCase):
         self.assertEqual(
             self.client.get("/api/bootstrap").headers["Cache-Control"], "no-store"
         )
+
+    def test_every_private_api_rejects_anonymous_requests(self):
+        self.create(
+            name="PRIVATE PRODUCT SENTINEL", supplier_url="https://secret.example/item"
+        )
+        anon = self.app.test_client()
+        for rule in self.app.url_map.iter_rules():
+            if not rule.rule.startswith("/api/") or rule.rule in {
+                "/api/session",
+                "/api/login",
+                "/api/health",
+            }:
+                continue
+            url = rule.rule.replace("<pid>", "unknown").replace("<market>", "SG")
+            for method in rule.methods - {"HEAD", "OPTIONS"}:
+                with self.subTest(url=url, method=method):
+                    response = anon.open(url, method=method, json={})
+                    self.assertEqual(response.status_code, 401)
+                    self.assertNotIn("PRIVATE PRODUCT SENTINEL", response.text)
+                    self.assertNotIn("secret.example", response.text)
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_production_https_login_and_cross_site_protection(self):
+        with patch.dict(os.environ, {"APP_ENV": "production"}):
+            app = create_app(
+                {
+                    "TESTING": True,
+                    "DATABASE": str(Path(self.temp.name) / "https.sqlite3"),
+                    "PASSWORD_HASH": PASSWORD_HASH,
+                    "APP_ORIGIN": "https://desk.example",
+                }
+            )
+        client = app.test_client()
+        session = client.get("/api/session", base_url="https://desk.example")
+        self.assertIn("Secure", session.headers["Set-Cookie"])
+        response = client.post(
+            "/api/login",
+            base_url="https://desk.example",
+            json={"password": PASSWORD},
+            headers={
+                "X-CSRF-Token": session.get_json()["csrf"],
+                "Origin": "https://desk.example",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        cookie = response.headers.getlist("Set-Cookie")[0]
+        for flag in ("Secure", "HttpOnly", "SameSite=Strict"):
+            self.assertIn(flag, cookie)
+        self.assertEqual(
+            response.headers["Strict-Transport-Security"], "max-age=31536000"
+        )
+        response = client.post(
+            "/api/products",
+            base_url="https://desk.example",
+            json=product(),
+            headers={
+                "X-CSRF-Token": response.get_json()["csrf"],
+                "Origin": "https://attacker.example",
+            },
+        )
+        self.assertEqual(response.status_code, 403)
 
     def test_create_edit_duplicate_and_persistence(self):
         p = self.create(name="Notebook", sku="NOTE-1")

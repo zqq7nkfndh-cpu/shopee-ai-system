@@ -1,0 +1,31 @@
+# Paid compute + 1 GB persistent disk. Review Render's estimate before creating.
+# This is an HTTPS web service protected by app login, not a private-network service.
+services:
+  - type: web
+    name: shopee-research-desk-zqq7nkfndh
+    runtime: python
+    plan: 0.5c-512mb
+    region: singapore
+    repo: https://github.com/zqq7nkfndh-cpu/shopee-ai-system
+    branch: feat/owner-only-hosting
+    autoDeployTrigger: "off"
+    numInstances: 1
+    buildCommand: pip install -r requirements.lock
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 60 --access-logfile - --error-logfile - 'shopee_workbench.app:create_app()'
+    healthCheckPath: /api/health
+    disk:
+      name: workbench-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /var/data/workbench.sqlite3
+      - key: APP_PASSWORD
+        sync: false
+      - key: APP_ORIGIN
+        fromService:
+          name: shopee-research-desk-zqq7nkfndh
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL

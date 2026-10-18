@@ -83,6 +83,14 @@ python -m pip check
 
 公開構成と手順は [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) にあります。最低限、**HTTPS、秘密情報の環境変数、永続ディスク、バックアップ**が必要です。Flask開発サーバーをそのまま公開しないでください。
 
+**自分だけ使う場合**は、パスワードを自分だけで管理します。商品・設定・履歴・バックアップ・CSVのAPIはすべてログイン必須です。ログイン画面とヘルスチェックは外部から到達可能で、VPNによるネットワーク非公開とは異なります。検索エンジンへの掲載は `noindex` と `robots.txt` で抑止しますが、これはアクセス制御ではありません。
+
+Render用の [render.yaml](render.yaml) を用意しました。Python 3.13・単一インスタンス・1GB永続ディスク・HTTPS・手動更新の構成です。**有料構成です。作成前にRenderの見積もりを確認してください。** 秘密情報は含めていません。最初にRenderの設定画面で12文字以上の専用 `APP_PASSWORD` を入力します。チャットやGitHubには送らないでください。
+
+[Renderのデプロイ設定を開く](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fzqq7nkfndh-cpu%2Fshopee-ai-system%2Ftree%2Ffeat%2Fowner-only-hosting)
+
+このリンクはPRの作業ブランチを使い、mainの変更は不要です。リンクを開くだけではデプロイ完了にはなりません。初回作成後は自動デプロイを無効にし、更新の都度確認して手動デプロイします。
+
 ```bash
 docker compose up --build -d
 ```
