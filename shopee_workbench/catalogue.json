@@ -1,0 +1,1085 @@
+[
+  {
+    "id": "idea-001",
+    "name": "マスキングテープセット",
+    "category": "Stationery",
+    "keywords": [
+      "washi tape",
+      "masking tape",
+      "stationery",
+      "craft"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese washi tape is globally popular for journaling and crafts",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-002",
+    "name": "ゲルインクボールペンセット",
+    "category": "Stationery",
+    "keywords": [
+      "gel pen",
+      "japanese pen",
+      "stationery",
+      "writing"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese pens (Pilot, Zebra, Uni) have worldwide cult following",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-003",
+    "name": "手帳・システム手帳",
+    "category": "Stationery",
+    "keywords": [
+      "japanese planner",
+      "techo",
+      "hobonichi",
+      "diary"
+    ],
+    "seasons": [
+      "autumn",
+      "winter"
+    ],
+    "hypothesis": "Hobonichi-style planners are trending in Asia",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-004",
+    "name": "スタンプセット（はんこ）",
+    "category": "Stationery",
+    "keywords": [
+      "japanese stamp",
+      "hanko",
+      "craft stamp",
+      "scrapbooking"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese rubber stamps popular in scrapbooking community",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-005",
+    "name": "ふせん・付箋紙セット",
+    "category": "Stationery",
+    "keywords": [
+      "sticky notes",
+      "memo pad",
+      "japanese stationery",
+      "kawaii"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Cute Japanese sticky notes popular for office and study",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-006",
+    "name": "弁当箱・ランチボックス",
+    "category": "Kitchen",
+    "keywords": [
+      "bento box",
+      "lunch box",
+      "japanese bento",
+      "food container"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese bento culture is globally trending via social media",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-007",
+    "name": "竹製箸セット",
+    "category": "Kitchen",
+    "keywords": [
+      "japanese chopsticks",
+      "bamboo chopsticks",
+      "reusable chopsticks"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Eco-friendly bamboo chopsticks in demand globally",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Thailand",
+      "Vietnam"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-008",
+    "name": "台所スポンジ・クリーニングクロス",
+    "category": "Household",
+    "keywords": [
+      "japanese sponge",
+      "kitchen sponge",
+      "cleaning cloth",
+      "microfiber"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese cleaning products known for quality and durability",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-009",
+    "name": "シリコン調理用品セット",
+    "category": "Kitchen",
+    "keywords": [
+      "silicone kitchen tools",
+      "cooking utensils",
+      "japanese kitchen"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Silicone kitchen tools trending for safety and durability",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-010",
+    "name": "折りたたみ式水切りラック",
+    "category": "Kitchen",
+    "keywords": [
+      "dish drying rack",
+      "foldable rack",
+      "japanese kitchen",
+      "space saving"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Space-saving Japanese kitchen tools popular in small apartments",
+    "suggested_markets": [
+      "Singapore",
+      "Taiwan",
+      "Malaysia"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-011",
+    "name": "ヘアゴム・ヘアアクセサリーセット",
+    "category": "Fashion Accessories",
+    "keywords": [
+      "hair accessories",
+      "hair ties",
+      "japanese hair",
+      "scrunchie"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese kawaii hair accessories trending across Southeast Asia",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand",
+      "Vietnam"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-012",
+    "name": "ヘアブラシ・クシセット",
+    "category": "Personal Care",
+    "keywords": [
+      "hair brush",
+      "japanese comb",
+      "detangling brush",
+      "wide tooth comb"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese hair tools known for quality bristles and ergonomic design",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-013",
+    "name": "手袋（手芸・防寒用）",
+    "category": "Fashion",
+    "keywords": [
+      "gloves",
+      "winter gloves",
+      "japanese fashion",
+      "cold weather"
+    ],
+    "seasons": [
+      "autumn",
+      "winter"
+    ],
+    "hypothesis": "Winter accessories from Japan valued for quality",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-014",
+    "name": "エコバッグ・折りたたみバッグ",
+    "category": "Bags",
+    "keywords": [
+      "eco bag",
+      "reusable bag",
+      "foldable bag",
+      "japanese bag"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Eco-friendly foldable bags trending with environmentally conscious consumers",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-015",
+    "name": "がま口財布・小物入れ",
+    "category": "Bags & Accessories",
+    "keywords": [
+      "gamaguchi",
+      "coin purse",
+      "japanese purse",
+      "traditional japanese"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Traditional Japanese clasp purses popular for their unique style",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-016",
+    "name": "コンパクト折りたたみ傘",
+    "category": "Fashion Accessories",
+    "keywords": [
+      "compact umbrella",
+      "japanese umbrella",
+      "foldable umbrella",
+      "UV umbrella"
+    ],
+    "seasons": [
+      "spring",
+      "summer"
+    ],
+    "hypothesis": "Japanese UV-protective umbrellas in demand in tropical countries",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-017",
+    "name": "収納ボックス・整理グッズ",
+    "category": "Home & Living",
+    "keywords": [
+      "storage box",
+      "organizer",
+      "japanese organization",
+      "muji style"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese minimalist home organization products trending globally",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-018",
+    "name": "アロマディフューザー（電池/USB式）",
+    "category": "Home & Living",
+    "keywords": [
+      "aroma diffuser",
+      "essential oil diffuser",
+      "japanese aroma",
+      "home fragrance"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Aromatherapy home products trending for wellness lifestyle",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-019",
+    "name": "風呂敷（マルチクロス）",
+    "category": "Home & Living",
+    "keywords": [
+      "furoshiki",
+      "japanese wrapping cloth",
+      "eco wrap",
+      "traditional japanese"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Traditional furoshiki cloth gaining popularity as eco-friendly gift wrap",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-020",
+    "name": "木製インテリア雑貨",
+    "category": "Home Decor",
+    "keywords": [
+      "wood decor",
+      "japanese home decor",
+      "wooden ornament",
+      "natural wood"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Natural wood home decor trending in minimalist interior design",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-021",
+    "name": "珪藻土バスマット",
+    "category": "Home & Living",
+    "keywords": [
+      "diatomite bath mat",
+      "japanese bath mat",
+      "stone bath mat",
+      "quick dry"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese diatomite bath mats are viral on social media for quick-drying properties",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-022",
+    "name": "ペット用おもちゃ",
+    "category": "Pet Care",
+    "keywords": [
+      "pet toy",
+      "cat toy",
+      "dog toy",
+      "japanese pet"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Pet humanization trend driving premium pet product demand",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-023",
+    "name": "ペット用食器・フードボウル",
+    "category": "Pet Care",
+    "keywords": [
+      "pet bowl",
+      "cat bowl",
+      "dog bowl",
+      "japanese pet accessories"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Premium pet bowls trending with pet humanization movement",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-024",
+    "name": "スポーツタオル・マイクロファイバータオル",
+    "category": "Sports & Outdoors",
+    "keywords": [
+      "microfiber towel",
+      "sports towel",
+      "japanese towel",
+      "gym towel"
+    ],
+    "seasons": [
+      "summer",
+      "all"
+    ],
+    "hypothesis": "Japanese quality microfiber towels popular for sports and outdoor activities",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-025",
+    "name": "アウトドア折りたたみグッズ",
+    "category": "Sports & Outdoors",
+    "keywords": [
+      "outdoor gear",
+      "foldable",
+      "camping",
+      "japanese outdoor"
+    ],
+    "seasons": [
+      "spring",
+      "summer",
+      "autumn"
+    ],
+    "hypothesis": "Outdoor camping culture growing in Southeast Asia",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-026",
+    "name": "スマホリング・スタンド",
+    "category": "Electronics Accessories",
+    "keywords": [
+      "phone ring holder",
+      "smartphone stand",
+      "pop socket",
+      "japanese"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Smartphone accessories always in demand with phone-dependent lifestyle",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-027",
+    "name": "ケーブルオーガナイザー",
+    "category": "Electronics Accessories",
+    "keywords": [
+      "cable organizer",
+      "cable management",
+      "desk organization",
+      "tech accessories"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Work-from-home trend driving demand for desk organization products",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-028",
+    "name": "ノートPCスタンド（折りたたみ）",
+    "category": "Electronics Accessories",
+    "keywords": [
+      "laptop stand",
+      "notebook stand",
+      "ergonomic stand",
+      "work from home"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Remote work driving laptop stand demand globally",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-029",
+    "name": "フェイスローラー（ステンレス製）",
+    "category": "Beauty Tools",
+    "keywords": [
+      "face roller",
+      "facial massager",
+      "beauty tool",
+      "skincare tool"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Face rolling tools viral on social media for skin massage",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-030",
+    "name": "頭皮マッサージャー",
+    "category": "Beauty Tools",
+    "keywords": [
+      "scalp massager",
+      "hair massager",
+      "head massager",
+      "japanese beauty"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Scalp care trend growing with focus on hair health",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-031",
+    "name": "アイマスク（睡眠用・遮光）",
+    "category": "Personal Care",
+    "keywords": [
+      "sleep mask",
+      "eye mask",
+      "blackout mask",
+      "japanese sleep"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Sleep quality focus driving demand for sleep accessories",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-032",
+    "name": "シルクヘアバンド・ナイトキャップ",
+    "category": "Beauty Tools",
+    "keywords": [
+      "silk hair band",
+      "night cap",
+      "hair care",
+      "beauty accessories"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Silk hair accessories trending for hair health maintenance",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-033",
+    "name": "色鉛筆セット（高品質）",
+    "category": "Art & Craft",
+    "keywords": [
+      "colored pencils",
+      "japanese art supplies",
+      "drawing pencils",
+      "artist pencils"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese art supplies (Faber-Castell, Tombow) trusted by artists worldwide",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-034",
+    "name": "水彩絵の具セット",
+    "category": "Art & Craft",
+    "keywords": [
+      "watercolor",
+      "watercolor set",
+      "japanese art",
+      "painting supplies"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Watercolor painting trending as relaxation hobby",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-035",
+    "name": "刺繍キット・手芸セット",
+    "category": "Art & Craft",
+    "keywords": [
+      "embroidery kit",
+      "japanese embroidery",
+      "sewing kit",
+      "cross stitch"
+    ],
+    "seasons": [
+      "winter"
+    ],
+    "hypothesis": "Handcraft revival trending during stay-at-home lifestyle",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-036",
+    "name": "ヨガマット（薄型・折りたたみ）",
+    "category": "Sports & Fitness",
+    "keywords": [
+      "yoga mat",
+      "travel yoga mat",
+      "foldable yoga mat",
+      "fitness mat"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Home fitness trend driving yoga mat demand globally",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-037",
+    "name": "ストレッチポール・フォームローラー",
+    "category": "Sports & Fitness",
+    "keywords": [
+      "foam roller",
+      "muscle roller",
+      "stretching",
+      "recovery tool"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Muscle recovery tools trending with fitness lifestyle",
+    "suggested_markets": [
+      "Singapore",
+      "Taiwan",
+      "Malaysia"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-038",
+    "name": "指圧グッズ・ツボ押し",
+    "category": "Health & Wellness",
+    "keywords": [
+      "acupressure tool",
+      "shiatsu",
+      "pressure point",
+      "japanese wellness"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Traditional Japanese wellness tools gaining global attention",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-039",
+    "name": "ハンディファン・携帯扇風機（USB充電式）",
+    "category": "Electronics Accessories",
+    "keywords": [
+      "handheld fan",
+      "portable fan",
+      "USB fan",
+      "cooling fan"
+    ],
+    "seasons": [
+      "summer"
+    ],
+    "hypothesis": "Portable fans essential in tropical Southeast Asian climate",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Philippines",
+      "Thailand",
+      "Vietnam"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-040",
+    "name": "カイロ・ホッカイロ（使い捨て）",
+    "category": "Seasonal",
+    "keywords": [
+      "hand warmer",
+      "heat pack",
+      "japanese warmer",
+      "pocket warmer"
+    ],
+    "seasons": [
+      "winter"
+    ],
+    "hypothesis": "Japanese disposable hand warmers loved globally for quality",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-041",
+    "name": "虫除けグッズ（非スプレー）",
+    "category": "Seasonal",
+    "keywords": [
+      "mosquito repellent",
+      "insect repellent patch",
+      "bug patch",
+      "japanese"
+    ],
+    "seasons": [
+      "summer"
+    ],
+    "hypothesis": "Mosquito repellent patches popular in tropical regions",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Philippines",
+      "Thailand",
+      "Vietnam"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-042",
+    "name": "知育おもちゃ（木製）",
+    "category": "Toys & Kids",
+    "keywords": [
+      "wooden toy",
+      "educational toy",
+      "japanese toy",
+      "kids toy"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Wooden educational toys trending for screen-free child development",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-043",
+    "name": "ベビー用品（食器・スプーン）",
+    "category": "Baby & Kids",
+    "keywords": [
+      "baby spoon",
+      "baby bowl",
+      "japanese baby",
+      "infant feeding"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Japanese baby products trusted for safety and BPA-free materials",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-044",
+    "name": "トラベルポーチ・旅行用整理袋",
+    "category": "Travel",
+    "keywords": [
+      "travel pouch",
+      "packing organizer",
+      "travel bag",
+      "luggage organizer"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Post-pandemic travel revival driving demand for travel organizers",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-045",
+    "name": "圧縮袋（旅行用）",
+    "category": "Travel",
+    "keywords": [
+      "compression bag",
+      "space saver bag",
+      "travel bag",
+      "vacuum bag"
+    ],
+    "seasons": [
+      "all"
+    ],
+    "hypothesis": "Travel compression bags popular for maximizing luggage space",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Philippines",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-046",
+    "name": "和柄ラッピングペーパー・包装紙",
+    "category": "Gift & Packaging",
+    "keywords": [
+      "japanese wrapping paper",
+      "washi paper",
+      "gift wrap",
+      "japanese pattern"
+    ],
+    "seasons": [
+      "winter"
+    ],
+    "hypothesis": "Japanese traditional patterns popular for unique gift presentation",
+    "suggested_markets": [
+      "Singapore",
+      "Malaysia",
+      "Taiwan",
+      "Thailand"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  },
+  {
+    "id": "idea-047",
+    "name": "ポチ袋・和柄封筒セット",
+    "category": "Stationery",
+    "keywords": [
+      "pochi bag",
+      "money envelope",
+      "japanese envelope",
+      "gift envelope"
+    ],
+    "seasons": [
+      "winter",
+      "spring"
+    ],
+    "hypothesis": "Japanese money envelopes popular for gifts and special occasions",
+    "suggested_markets": [
+      "Taiwan",
+      "Singapore",
+      "Malaysia"
+    ],
+    "source_type": "editorial_idea",
+    "note": "旧版カタログ由来の着想。需要・価格・送料・推奨国は未検証。"
+  }
+]
