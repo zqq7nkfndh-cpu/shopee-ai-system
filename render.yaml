@@ -8,7 +8,7 @@ services:
     region: singapore
     repo: https://github.com/zqq7nkfndh-cpu/shopee-ai-system
     branch: feat/owner-only-hosting
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     numInstances: 1
     buildCommand: pip install -r requirements.lock
     startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 60 --access-logfile - --error-logfile - 'shopee_workbench.app:create_app()'
