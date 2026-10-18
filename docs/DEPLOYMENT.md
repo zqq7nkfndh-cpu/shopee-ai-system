@@ -11,6 +11,30 @@
 
 Flask開発サーバーを公開に使用しない方針は、Flask公式の[本番デプロイガイド](https://flask.palletsprojects.com/en/stable/deploying/)に基づきます。Sites / Cloudflare WorkersにはこのSQLiteファイル構成をそのまま載せられません。必要ならD1等への永続化層の移植が別作業です。
 
+## 自分だけ使う：Renderの起動設定
+
+リポジトリの `render.yaml` は、Flaskをそのまま実行する構成です。
+
+- Webサービス1台、0.5 CPU / 512MB、シンガポール、Python 3.13の最新パッチ。
+- SQLiteは1GB永続ディスクの `/var/data/workbench.sqlite3` に保存。
+- `APP_PASSWORD` はRenderのSecret設定に入力。12文字以上の専用パスワードを自分だけで管理。コード・チャットには保存しない。
+- `APP_ORIGIN` はRenderの `RENDER_EXTERNAL_URL` を自己参照し、発行されたHTTPS URLに合わせる。
+- 自動デプロイは無効。GitHubのPRを更新しても稼働中データを触るデプロイは自動実行しない。
+
+**有料のComputeと永続ディスクを作成します。料金・税・追加使用量を確認してから作成してください。** 無料Webサービスへ変更してローカルSQLiteを置くと、再起動・再デプロイでデータを失います。予算承認前に有料サービスを作成しないでください。
+
+1. READMEの「Renderのデプロイ設定を開く」からログインし、対象ブランチが `feat/owner-only-hosting` であることを確認。
+2. 設定内容と料金を確認し、`APP_PASSWORD` をRender画面へ直接入力。AIキーは初回起動に不要。
+3. 作成・デプロイが成功したら、表示された `https://...onrender.com` をSafariで開き、自分のパスワードでログイン。
+4. 別の未ログインブラウザでは `/api/bootstrap` と `/api/backup` が401になり、データが表示されないことを確認。
+5. 候補を保存し、Renderで再起動した後にも残ることを確認。JSONバックアップをダウンロードして安全な場所に保存。
+
+この方式は**外部から到達可能なログイン画面で、データへのアクセスをパスワードで制限**します。ネットワーク自体を閉じるVPN構成ではありません。全レスポンスの `X-Robots-Tag`、HTMLの `robots` メタ、`robots.txt` で検索掲載も抑止しますが、これらは認証の代わりにはなりません。URLを知るだけでは保護対象APIにアクセスできません。
+
+Renderの「Private Service」は通常のiPadブラウザから直接開くためのものではないため、今回の設定は `type: web` です。GitHubのソース公開範囲はこのログイン認証とは別です。
+
+公式資料（2026-10-18確認）：[Blueprint](https://render.com/docs/blueprint-spec)、[永続ディスク](https://render.com/docs/disks)、[デプロイリンク](https://render.com/docs/deploy-to-render)、[Pythonバージョン](https://render.com/docs/python-version)、[料金](https://render.com/pricing)。アカウント接続と有料リソース作成はまだ行っていません。実ホスト上のディスク・TLS・ログイン動作はデプロイ後に検証が必要です。
+
 ## 設定
 
 | 環境変数 | 内容 |
